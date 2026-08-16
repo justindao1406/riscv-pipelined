@@ -1,0 +1,25 @@
+﻿RV32I Single-Cycle Processor - Final Results
+
+Target device: XC7Z020CLG400-1
+Clock period: 11.000 ns
+Verified frequency: 90.9 MHz
+
+Post-implementation timing:
+WNS: +0.193 ns
+TNS: 0.000 ns
+WHS: +0.364 ns
+THS: 0.000 ns
+Setup failing endpoints: 0
+Hold failing endpoints: 0
+
+Post-implementation utilization:
+Slice LUTs: 643
+Slice registers: 32
+LUTs used as memory: 172
+Bonded I/O: 66
+BUFGCTRL: 1
+
+Verification:
+All integrated self-checking tests passed.
+Tested fetch, decoding, operand extraction, ALU operations,
+memory access, register writeback, branches, JAL, JALR, and reset.
