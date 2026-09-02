@@ -74,8 +74,8 @@ module riscv_pipelined_tb();
     end
     
     always @(posedge clk) begin
-        $display("dut.request_indicatorM = %0d dut.transaction_pendingM = %0d dut.completed_transactionM = %0d  mem_readM = %0d dut.mem_writeM = %0d is_memory_stall = %0d", 
-        dut.request_indicatorM, dut.transaction_pendingM, dut.completed_transactionM, dut.mem_readM, dut.mem_writeM, dut.is_memory_stall);
+        $display("dut.dm_inst.busy = %0d dut.dm_inst.counter = %0d dut.completed_transactionM = %0d  mem_readM = %0d dut.mem_writeM = %0d is_memory_stall = %0d", 
+        dut.dm_inst.busy, dut.dm_inst.counter, dut.completed_transactionM, dut.mem_readM, dut.mem_writeM, dut.is_memory_stall);
     end
 
     
