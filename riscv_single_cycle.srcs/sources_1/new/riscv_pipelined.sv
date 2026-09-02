@@ -56,6 +56,7 @@ module riscv_pipelined(
     logic [6:0] opcodeD;
     logic reg_writeD;
     logic mem_writeD;
+    logic mem_readD;
     logic [1:0] alu_src_aD;
     logic alu_src_bD;
     logic [1:0] result_srcD;
@@ -67,7 +68,7 @@ module riscv_pipelined(
     assign opcodeD = instructionD[6:0];
     
     main_decoder md_inst 
-    ( .opcode(opcodeD), .reg_write(reg_writeD), .mem_write(mem_writeD),
+    ( .opcode(opcodeD), .reg_write(reg_writeD), .mem_write(mem_writeD), .mem_read(mem_readD),
     .alu_src_a(alu_src_aD), .alu_src_b(alu_src_bD), .result_src(result_srcD),
     .imm_sel(imm_selD), .branch(branchD), .jump(jumpD), .alu_op(alu_opD) );
     
@@ -134,6 +135,7 @@ module riscv_pipelined(
      // Used for memory 
      
      logic mem_writeE;
+     logic mem_readE;
      
      // Used for write back
      
@@ -183,6 +185,7 @@ module riscv_pipelined(
             jumpE <= 0;
             funct3E <= 0;
             mem_writeE <= 0;
+            mem_readE <= 0;
             result_srcE <= 0;
             rd_addrE <= 0;
             reg_writeE <= 0;
@@ -203,6 +206,7 @@ module riscv_pipelined(
             jumpE <= 0;
             funct3E <= 0;
             mem_writeE <= 0;
+            mem_readE <= 0;
             result_srcE <= 0;
             rd_addrE <= 0;
             reg_writeE <= 0;
@@ -223,6 +227,7 @@ module riscv_pipelined(
             jumpE <= jumpD;
             funct3E <= funct3D;
             mem_writeE <= mem_writeD;
+            mem_readE <= mem_readD;
             result_srcE <= result_srcD;
             rd_addrE <= rd_addrD;
             reg_writeE <= reg_writeD;
@@ -372,6 +377,7 @@ module riscv_pipelined(
      logic [31:0] rs2_dataM;
      logic [31:0] alu_resM;
      logic mem_writeM;   
+     logic mem_readM;
      
      // For write back
       
@@ -386,6 +392,7 @@ module riscv_pipelined(
             rs2_dataM <= 0;
             alu_resM <= 0;
             mem_writeM <= 0;
+            mem_readM <= 0;
             result_srcM <= 0;
             rd_addrM <= 0;
             reg_writeM <= 0;
@@ -396,6 +403,7 @@ module riscv_pipelined(
             rs2_dataM <= forwarded_rs2E;
             alu_resM <= alu_resE;
             mem_writeM <= mem_writeE;
+            mem_readM <= mem_readE;
             result_srcM <= result_srcE;
             rd_addrM <= rd_addrE;
             reg_writeM <= reg_writeE;
@@ -410,6 +418,7 @@ module riscv_pipelined(
      ( .clk(clk), .write_enable(mem_writeM && !reset), .address(alu_resM), 
      .data_in(rs2_dataM), .data_out(data_outM) );
      
+     // Note: Load is still combinatorial, mem_readM just helps us identify if operation is either load/store
      
      // ---------------------------------------- WRITE BACK ---------------------------------------- 
      

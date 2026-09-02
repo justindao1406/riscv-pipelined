@@ -4,6 +4,7 @@ module main_decoder(
     input logic [6:0] opcode,
     output logic reg_write,
     output logic mem_write,
+    output logic mem_read,
     output logic [1:0] alu_src_a,
     output logic alu_src_b,
     output logic [1:0] result_src,
@@ -72,6 +73,7 @@ module main_decoder(
     always_comb begin
         reg_write = 0;
         mem_write = 0;
+        mem_read = 0;
         alu_src_a = rs1_data;
         alu_src_b = rs2_data;
         result_src = alu_result;
@@ -85,6 +87,7 @@ module main_decoder(
             R_TYPE_ALU: begin
                 reg_write = 1;
                 mem_write = 0;
+                mem_read = 0;
                 alu_src_a = rs1_data;
                 alu_src_b = rs2_data;
                 result_src = alu_result;
@@ -97,6 +100,7 @@ module main_decoder(
             I_TYPE_ALU: begin
                 reg_write = 1;
                 mem_write = 0;
+                mem_read = 0;
                 alu_src_a = rs1_data;
                 alu_src_b = gen_imm;
                 result_src = alu_result;
@@ -109,6 +113,7 @@ module main_decoder(
             LOAD: begin
                 reg_write = 1;
                 mem_write = 0;
+                mem_read = 1;
                 alu_src_a = rs1_data;
                 alu_src_b = gen_imm;
                 result_src = data_mem;
@@ -121,6 +126,7 @@ module main_decoder(
             STORE: begin
                 reg_write = 0;
                 mem_write = 1;
+                mem_read = 0;
                 alu_src_a = rs1_data;
                 alu_src_b = gen_imm;
                 result_src = alu_result; // ignore
@@ -133,6 +139,7 @@ module main_decoder(
             BRANCH: begin
                 reg_write = 0;
                 mem_write = 0;
+                mem_read = 0;
                 alu_src_a = rs1_data;
                 alu_src_b = rs2_data;
                 result_src = alu_result; // ignore
@@ -145,6 +152,7 @@ module main_decoder(
             JAL: begin
                 reg_write = 1;
                 mem_write = 0;
+                mem_read = 0;
                 alu_src_a = rs1_data; // ignore
                 alu_src_b = rs2_data; // ignore
                 result_src = pc_incr; 
@@ -157,6 +165,7 @@ module main_decoder(
             JALR: begin
                 reg_write = 1;
                 mem_write = 0;
+                mem_read = 0;
                 alu_src_a = rs1_data; 
                 alu_src_b = gen_imm; 
                 result_src = pc_incr; 
@@ -169,6 +178,7 @@ module main_decoder(
             LUI: begin
                 reg_write = 1;
                 mem_write = 0;
+                mem_read = 0;
                 alu_src_a = const_zero; 
                 alu_src_b = gen_imm; 
                 result_src = alu_result; 
@@ -181,6 +191,7 @@ module main_decoder(
             AUIPC: begin
                 reg_write = 1;
                 mem_write = 0;
+                mem_read = 0;
                 alu_src_a = current_pc; 
                 alu_src_b = gen_imm; 
                 result_src = alu_result; 
@@ -193,6 +204,7 @@ module main_decoder(
             default: begin 
                 reg_write = 0;
                 mem_write = 0;
+                mem_read = 0;
                 alu_src_a = rs1_data;
                 alu_src_b = rs2_data;
                 result_src = alu_result;
