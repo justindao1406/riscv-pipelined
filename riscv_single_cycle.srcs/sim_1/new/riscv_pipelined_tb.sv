@@ -72,6 +72,10 @@ module riscv_pipelined_tb();
         
         $finish;
     end
+    
+    always @(posedge clk) begin
+        $display("mem_readM = %0d mem_writeM = %0d request_indicatorM = %0d", dut.mem_readM, dut.mem_writeM, dut.request_indicatorM);
+    end
 
     
     always begin

@@ -379,6 +379,8 @@ module riscv_pipelined(
      logic mem_writeM;   
      logic mem_readM;
      
+     logic request_indicatorM; // 1 if CPU requests either a load or a store
+     
      // For write back
       
      logic [1:0] result_srcM;
@@ -418,7 +420,17 @@ module riscv_pipelined(
      ( .clk(clk), .write_enable(mem_writeM && !reset), .address(alu_resM), 
      .data_in(rs2_dataM), .data_out(data_outM) );
      
-     // Note: Load is still combinatorial, mem_readM just helps us identify if operation is either load/store
+     // Note: Load remains combinational 
+     // mem_readM identifies loads and mem_writeM identifies stores
+     
+     always_comb begin
+        if (mem_writeM || mem_readM) begin
+            request_indicatorM = 1;
+        end
+        else begin
+            request_indicatorM = 0;
+        end
+     end
      
      // ---------------------------------------- WRITE BACK ---------------------------------------- 
      
