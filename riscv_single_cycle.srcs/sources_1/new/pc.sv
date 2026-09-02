@@ -4,7 +4,8 @@ module pc(
     input clk,
     input logic reset,
     input logic [31:0] next_pc,
-    input logic is_stall,
+    input logic is_load_stall,
+    input logic is_memory_stall,
     output logic [31:0] current_pc
     );
     
@@ -12,7 +13,7 @@ module pc(
         if (reset) begin
             current_pc <= 32'd0;
         end
-        else if (is_stall) begin
+        else if (is_load_stall || is_memory_stall) begin
             current_pc <= current_pc;
         end
         else begin

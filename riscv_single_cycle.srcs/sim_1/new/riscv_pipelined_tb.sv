@@ -46,7 +46,7 @@ module riscv_pipelined_tb();
         @(negedge clk);
         reset = 0;
         
-        repeat (30) begin
+        repeat (50) begin
             @(posedge clk);
         end
         
@@ -74,7 +74,8 @@ module riscv_pipelined_tb();
     end
     
     always @(posedge clk) begin
-        $display("mem_readM = %0d mem_writeM = %0d request_indicatorM = %0d", dut.mem_readM, dut.mem_writeM, dut.request_indicatorM);
+        $display("dut.request_indicatorM = %0d dut.transaction_pendingM = %0d dut.completed_transactionM = %0d  mem_readM = %0d dut.mem_writeM = %0d is_memory_stall = %0d", 
+        dut.request_indicatorM, dut.transaction_pendingM, dut.completed_transactionM, dut.mem_readM, dut.mem_writeM, dut.is_memory_stall);
     end
 
     

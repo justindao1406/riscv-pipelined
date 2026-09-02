@@ -7,8 +7,10 @@ module riscv_pipelined(
     output logic [31:0] debug_write_data
     );
     
-    logic is_stall;
+    logic is_load_stall;
     logic is_flush;
+    
+    logic is_memory_stall; // stalls CPU while memory transaction is still happening
     
     // ---------------------------------------- FETCH ----------------------------------------
     
@@ -21,7 +23,7 @@ module riscv_pipelined(
     
     assign pc_plus_4F = pcF + 32'd4;
     
-    pc pc_inst ( .clk(clk), .reset(reset), .next_pc(next_pcF), .is_stall(is_stall), .current_pc(pcF) );
+    pc pc_inst ( .clk(clk), .reset(reset), .next_pc(next_pcF), .is_load_stall(is_load_stall), .is_memory_stall(is_memory_stall), .current_pc(pcF) );
     
     instruction_memory im_inst ( .current_pc(pcF), .instruction(instructionF) );
     
@@ -36,12 +38,22 @@ module riscv_pipelined(
     logic [31:0] pc_plus_4D;
     
     always_ff @(posedge clk) begin
-        if (reset || is_flush) begin
+        if (reset) begin
             pcD <= 32'd0;
             instructionD <= 32'd0;
             pc_plus_4D <= 32'd0;
         end
-        else if (is_stall) begin
+        else if (is_memory_stall) begin
+            pcD <= pcD;
+            instructionD <= instructionD;
+            pc_plus_4D <= pc_plus_4D;               
+        end
+        else if (is_flush) begin
+            pcD <= 32'd0;
+            instructionD <= 32'd0;
+            pc_plus_4D <= 32'd0;
+        end
+        else if (is_load_stall) begin
             pcD <= pcD;
             instructionD <= instructionD;
             pc_plus_4D <= pc_plus_4D;    
@@ -104,7 +116,7 @@ module riscv_pipelined(
      logic reg_writeW; // Came from write back
      
      register_file rf_inst
-     ( .clk(clk), .write_enable(reg_writeW && !reset), .write_addr(rd_addrW), .write_data(write_dataW), 
+     ( .clk(clk), .write_enable(reg_writeW && !reset && !is_memory_stall), .write_addr(rd_addrW), .write_data(write_dataW), 
      .rs1_addr(rs1_addrD), .rs2_addr(rs2_addrD), .rs1_data(rs1_dataD), .rs2_data(rs2_dataD) );
      
      // ~~~~~ main decoder -> immediate generator ~~~~~
@@ -164,10 +176,10 @@ module riscv_pipelined(
      
      always_comb begin
          if (is_loadE == 1 && (rd_addrE == rs1_addrD || rd_addrE == rs2_addrD) && reg_writeE == 1 && rd_addrE != 32'd0) begin
-            is_stall = 1;
+            is_load_stall = 1;
          end
          else begin
-            is_stall = 0;
+            is_load_stall = 0;
          end
      end
      
@@ -193,7 +205,28 @@ module riscv_pipelined(
             rs2_addrE <= 0;   
         end 
         
-        else if (is_stall || is_flush) begin
+        else if (is_memory_stall) begin
+            pcE <= pcE;
+            pc_plus_4E <= pc_plus_4E;
+            rs1_dataE <= rs1_dataE;          
+            rs2_dataE <= rs2_dataE;   
+            immediateE <= immediateE;
+            alu_ctrlE <= alu_ctrlE;
+            alu_src_aE <= alu_src_aE;
+            alu_src_bE <= alu_src_bE;
+            branchE <= branchE;
+            jumpE <= jumpE;
+            funct3E <= funct3E;
+            mem_writeE <= mem_writeE;
+            mem_readE <= mem_readE;
+            result_srcE <= result_srcE;
+            rd_addrE <= rd_addrE;
+            reg_writeE <= reg_writeE;
+            rs1_addrE <= rs1_addrE;
+            rs2_addrE <= rs2_addrE;
+        end
+        
+        else if (is_load_stall || is_flush) begin
             pcE <= 0;
             pc_plus_4E <= 0;
             rs1_dataE <= 0;
@@ -380,6 +413,8 @@ module riscv_pipelined(
      logic mem_readM;
      
      logic request_indicatorM; // 1 if CPU requests either a load or a store
+     logic transaction_pendingM;
+     logic completed_transactionM;
      
      // For write back
       
@@ -399,6 +434,17 @@ module riscv_pipelined(
             rd_addrM <= 0;
             reg_writeM <= 0;
         end
+        else if (is_memory_stall) begin
+            pcM <= pcM;
+            pc_plus_4M <= pc_plus_4M;
+            rs2_dataM <= rs2_dataM;
+            alu_resM <= alu_resM;
+            mem_writeM <= mem_writeM;
+            mem_readM <= mem_readM;
+            result_srcM <= result_srcM;
+            rd_addrM <= rd_addrM;
+            reg_writeM <= reg_writeM;            
+        end
         else begin
             pcM <= pcE;
             pc_plus_4M <= pc_plus_4E;
@@ -417,18 +463,48 @@ module riscv_pipelined(
      logic [31:0] data_outM;
      
      data_memory dm_inst
-     ( .clk(clk), .write_enable(mem_writeM && !reset), .address(alu_resM), 
-     .data_in(rs2_dataM), .data_out(data_outM) );
+     ( .clk(clk), .reset(reset), .request_sent(request_indicatorM), .write_enable(mem_writeM && !reset && request_indicatorM), .address(alu_resM), 
+     .data_in(rs2_dataM), .data_out(data_outM), .completed_transaction(completed_transactionM) );
      
      // Note: Load remains combinational 
      // mem_readM identifies loads and mem_writeM identifies stores
      
+     // REQUEST SENT LOGIC
+     
      always_comb begin
-        if (mem_writeM || mem_readM) begin
+        if ((mem_writeM || mem_readM) && !transaction_pendingM) begin
             request_indicatorM = 1;
         end
         else begin
             request_indicatorM = 0;
+        end
+     end
+     
+     // TRANSACTION PENDING LOGIC
+     
+     always_ff @(posedge clk) begin
+        if (reset) begin
+            transaction_pendingM <= 0;
+        end
+        else if (completed_transactionM) begin
+            transaction_pendingM <= 0;
+        end
+        else if (request_indicatorM) begin
+            transaction_pendingM <= 1; // stays latched on until transaction is over
+        end
+     end
+     
+     // STALL (FROM REQUEST) LOGIC
+     
+     always_comb begin
+        if (completed_transactionM) begin
+            is_memory_stall = 0;
+        end
+        else if (request_indicatorM || transaction_pendingM) begin
+            is_memory_stall = 1;
+        end
+        else begin
+            is_memory_stall = 0;
         end
      end
      
@@ -451,6 +527,15 @@ module riscv_pipelined(
             result_srcW <= 0;
             rd_addrW <= 0;
             reg_writeW <= 0;
+         end
+         else if (is_memory_stall) begin
+            pcW <= pcW;
+            pc_plus_4W <= pc_plus_4W;
+            data_outW <= data_outW;
+            alu_resW <= alu_resW;
+            result_srcW <= result_srcW;
+            rd_addrW <= rd_addrW;
+            reg_writeW <= reg_writeW; 
          end
          else begin
             pcW <= pcM;
