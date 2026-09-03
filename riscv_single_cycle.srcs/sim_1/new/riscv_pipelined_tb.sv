@@ -7,10 +7,14 @@ module riscv_pipelined_tb();
 
     logic clk;
     logic reset;
+    logic [31:0] debug_pc;
+    logic [31:0] debug_write_data;
     
     logic [31:0] predicted_registers [1:21];
     
-    riscv_pipelined dut ( .clk(clk), .reset(reset) );
+    riscv_system dut 
+    ( .clk(clk), .reset(reset), 
+    .debug_write_data(debug_write_data) );
     
     initial begin
         clk = 0;
@@ -40,7 +44,7 @@ module riscv_pipelined_tb();
         predicted_registers[21] = 32'd130;
         
         for ( i = 1; i <= 31; i++ ) begin
-            dut.rf_inst.register_array[i] = 32'd0;   
+            dut.cpu_inst.rf_inst.register_array[i] = 32'd0;   
         end
         
         @(negedge clk);
@@ -53,8 +57,8 @@ module riscv_pipelined_tb();
         #2;
         
         for (i = 1; i <= 21; i++) begin
-            if (dut.rf_inst.register_array[i] !== predicted_registers[i]) begin
-                $error("Register %0d FAILED: actual=%0d expected=%0d", i, dut.rf_inst.register_array[i], predicted_registers[i]);
+            if (dut.cpu_inst.rf_inst.register_array[i] !== predicted_registers[i]) begin
+                $error("Register %0d FAILED: actual=%0d expected=%0d", i, dut.cpu_inst.rf_inst.register_array[i], predicted_registers[i]);
                 errors = errors + 1;
             end
         end
@@ -72,12 +76,6 @@ module riscv_pipelined_tb();
         
         $finish;
     end
-    
-    always @(posedge clk) begin
-        $display("dut.dm_inst.busy = %0d dut.dm_inst.counter = %0d dut.completed_transactionM = %0d  mem_readM = %0d dut.mem_writeM = %0d is_memory_stall = %0d", 
-        dut.dm_inst.busy, dut.dm_inst.counter, dut.completed_transactionM, dut.mem_readM, dut.mem_writeM, dut.is_memory_stall);
-    end
-
     
     always begin
         #5;

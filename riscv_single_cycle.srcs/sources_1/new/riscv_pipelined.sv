@@ -3,6 +3,12 @@
 module riscv_pipelined(
     input logic clk,
     input logic reset,
+    input logic completed_transaction, 
+    input logic [31:0] load_data_response,
+    output logic [31:0] store_data_request,
+    output logic mem_request,
+    output logic mem_read_or_write, // 0 -> read, 1 -> write
+    output logic [31:0] mem_address,
     output logic [31:0] debug_pc,
     output logic [31:0] debug_write_data
     );
@@ -414,7 +420,6 @@ module riscv_pipelined(
      
      logic request_indicatorM; // 1 if CPU requests either a load or a store
      logic transaction_pendingM;
-     logic completed_transactionM;
      
      // For write back
       
@@ -458,14 +463,6 @@ module riscv_pipelined(
         end
      end
      
-     // ~~~~~ rs2 data + alu res -> data memory ~~~~~
-     
-     logic [31:0] data_outM;
-     
-     data_memory dm_inst
-     ( .clk(clk), .reset(reset), .request_sent(request_indicatorM), .write_enable(mem_writeM && !reset && request_indicatorM), .address(alu_resM), 
-     .data_in(rs2_dataM), .data_out(data_outM), .completed_transaction(completed_transactionM) );
-     
      // Note: Load remains combinational 
      // mem_readM identifies loads and mem_writeM identifies stores
      
@@ -486,7 +483,7 @@ module riscv_pipelined(
         if (reset) begin
             transaction_pendingM <= 0;
         end
-        else if (completed_transactionM) begin
+        else if (completed_transaction) begin
             transaction_pendingM <= 0;
         end
         else if (request_indicatorM) begin
@@ -497,7 +494,7 @@ module riscv_pipelined(
      // STALL (FROM REQUEST) LOGIC
      
      always_comb begin
-        if (completed_transactionM) begin
+        if (completed_transaction) begin
             is_memory_stall = 0;
         end
         else if (request_indicatorM || transaction_pendingM) begin
@@ -507,6 +504,13 @@ module riscv_pipelined(
             is_memory_stall = 0;
         end
      end
+     
+     // TEMP
+     
+     assign mem_request = request_indicatorM;
+     assign mem_read_or_write = mem_writeM;
+     assign mem_address = alu_resM;
+     assign store_data_request = rs2_dataM;
      
      // ---------------------------------------- WRITE BACK ---------------------------------------- 
      
@@ -540,7 +544,7 @@ module riscv_pipelined(
          else begin
             pcW <= pcM;
             pc_plus_4W <= pc_plus_4M;
-            data_outW <= data_outM;
+            data_outW <= load_data_response;
             alu_resW <= alu_resM;
             result_srcW <= result_srcM;
             rd_addrW <= rd_addrM;
