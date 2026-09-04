@@ -29,7 +29,8 @@ module riscv_pipelined(
     
     assign pc_plus_4F = pcF + 32'd4;
     
-    pc pc_inst ( .clk(clk), .reset(reset), .next_pc(next_pcF), .is_load_stall(is_load_stall), .is_memory_stall(is_memory_stall), .current_pc(pcF) );
+    pc pc_inst 
+    ( .clk(clk), .reset(reset), .next_pc(next_pcF), .is_load_stall(is_load_stall), .is_memory_stall(is_memory_stall), .current_pc(pcF) );
     
     instruction_memory im_inst ( .current_pc(pcF), .instruction(instructionF) );
     
