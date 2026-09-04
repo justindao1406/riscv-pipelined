@@ -8,19 +8,43 @@ module riscv_system(
     );
     
     logic completed_transaction;
-    logic [31:0] load_data_response;
-    logic [31:0] store_data_request;
+    logic [31:0] load_data;
+    logic [31:0] store_data;
     logic mem_request;
     logic mem_read_or_write;
     logic [31:0] mem_address;
     
+    logic [31:0] ARADDR;
+    logic ARVALID;
+    logic ARREADY;
+    logic [31:0] RDATA;
+    logic [1:0] RRESP;
+    logic RVALID;
+    logic RREADY;
+    
+    logic [31:0] AWADDR;
+    logic AWVALID;
+    logic AWREADY;
+    logic [31:0] WDATA;
+    logic [3:0] WSTRB;
+    logic WVALID;
+    logic WREADY;
+    logic [1:0] BRESP;
+    logic BVALID;
+    logic BREADY;
+    
+    
+    
     riscv_pipelined cpu_inst 
-    ( .clk(clk), .reset(reset), .completed_transaction(completed_transaction), .load_data_response(load_data_response),
-    .store_data_request(store_data_request), .mem_request(mem_request), .mem_read_or_write(mem_read_or_write),
+    ( .clk(clk), .reset(reset), .completed_transaction(completed_transaction), .load_data_response(load_data), 
+    .store_data_request(store_data), .mem_request(mem_request), .mem_read_or_write(mem_read_or_write),
     .mem_address(mem_address), .debug_pc(debug_pc), .debug_write_data(debug_write_data) );
     
-    data_memory data_mem_inst
-     ( .clk(clk), .reset(reset), .request_sent(mem_request), .write_enable(mem_read_or_write && !reset && mem_request), .address(mem_address), 
-     .data_in(store_data_request), .data_out(load_data_response), .completed_transaction(completed_transaction) );
+    axi_lite_master axi_inst 
+    ( .clk(clk), .reset(reset), .store_data(store_data), .mem_request(mem_request), .mem_read_or_write(mem_read_or_write), 
+    .mem_address(mem_address), .ARREADY(ARREADY), .RDATA(RDATA), .RRESP(RRESP), .RVALID(RVALID), .AWREADY(AWREADY), 
+    .WREADY(WREADY), .BRESP(BRESP), .BVALID(BVALID), .load_data(load_data), .completed_transaction(completed_transaction), 
+    .ARADDR(ARADDR), .ARVALID(ARVALID), .RREADY(RREADY), .AWADDR(AWADDR), .AWVALID(AWVALID), .WDATA(WDATA), .WSTRB(WSTRB), 
+    .WVALID(WVALID), .BREADY(BREADY) );
     
 endmodule

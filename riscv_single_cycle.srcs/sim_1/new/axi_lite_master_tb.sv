@@ -360,6 +360,74 @@ module axi_lite_master_tb();
                 dut.data_done,
                 BREADY,
                 completed_transaction);
+        end          
+        
+        AWREADY = 0;
+        WREADY = 0;
+        BVALID = 0;
+        BRESP = 2'b00;
+        mem_request = 0;
+        
+        @(posedge clk);
+        #1;  
+                
+        // Test 5 - Address and data accepted in the same cycle w/ BRESP = 10
+        
+        mem_request = 1;
+        mem_read_or_write = 1;
+        
+        repeat (5) begin
+            @(posedge clk);
+        end   
+        
+        #1;
+        
+        AWREADY = 1;
+        WREADY = 1;
+        
+        @(posedge clk);
+        
+        #1;
+        
+        $display("address_done = %0d data_done = %0d AWVALID = %0d WVALID = %0d", 
+        dut.address_done, dut.data_done, AWVALID, WVALID);
+        
+        repeat (5) begin
+            @(posedge clk);
+        end
+        
+        BRESP = 2'b10;
+        BVALID = 1; 
+        mem_request = 0;
+        
+        #1;
+        
+        if (completed_transaction && BRESP == 2'b10) begin
+            $display("TEST SUCCESS: completed_trasaction equals to 1");
+        end
+        else begin
+            $error("TEST FAILED");
+        end
+        
+        @(posedge clk);
+        
+        #1;
+        
+        if (dut.current_state == 2'd0 && dut.address_done == 0 && dut.data_done == 0 && BREADY == 0 && completed_transaction == 0) begin
+            $display("TEST SUCCESS: state=%0d address_done=%0d data_done=%0d BREADY=%0d completed_transaction=%0d",
+                dut.current_state,
+                dut.address_done,
+                dut.data_done,
+                BREADY,
+                completed_transaction);
+        end
+        else begin
+            $error("TEST FAILED: state=%0d address_done=%0d data_done=%0d BREADY=%0d completed_transaction=%0d",
+                dut.current_state,
+                dut.address_done,
+                dut.data_done,
+                BREADY,
+                completed_transaction);
         end            
         
         $finish;
