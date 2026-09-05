@@ -175,6 +175,8 @@ module axi_interconnect_tb();
         
         reset = 0;
         
+        // ---------------------------------- READ ----------------------------------  
+        
         // memory
         
         ARADDR = 32'h0000_0004;
@@ -295,6 +297,179 @@ module axi_interconnect_tb();
         
         gpio_RVALID = 0;
         RREADY = 0;
+        
+        // ---------------------------------- WRITE ----------------------------------        
+        
+        // memory 
+        
+        AWADDR = 32'h0000_0004;
+        AWVALID = 1;
+        
+        memory_AWREADY = 1;
+        
+        wait (AWVALID && AWREADY) begin
+            $display("AWVALID and AWREADY both equal to 1");
+        end
+
+        @(posedge clk);
+        #1;        
+        
+        if (memory_AWVALID == 1 &&
+            memory_AWADDR == 32'h0000_0004 &&
+            gpio_AWVALID == 0) begin
+            $display("TEST PASSED: Memory address routed correctly");
+        end
+        else begin
+            $display("TEST FAILED: Memory address routing");
+        end 
+        
+        AWVALID = 0;
+        memory_AWREADY = 0;
+        
+        repeat (5) begin
+            @(posedge clk);
+        end  
+        
+        WDATA  = 32'd67;
+        WSTRB = 4'b1111;
+        WVALID = 1;   
+        
+        memory_WREADY = 1;
+        
+        @(posedge clk);
+        
+        wait (WVALID && WREADY) begin
+            $display("WVALID and WREADY both equal to 1");
+        end
+        
+        #1;
+       
+        if (memory_WVALID == 1 && memory_WDATA == 32'd67 && memory_WSTRB == 4'b1111 && WREADY == 1) begin
+            $display("TEST PASSED: Write data transfer succesful");
+        end     
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        if (gpio_AWVALID == 0 && gpio_WVALID == 0) begin
+            $display("TEST PASSED: GPIO not involved");
+        end
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        #1;
+        
+        WVALID = 0;
+        memory_WREADY = 0;
+        
+        @(posedge clk);
+        #1
+        
+        memory_BRESP = 2'b00;
+        memory_BVALID = 1;
+        BREADY = 1;
+        
+        #1;
+        
+        if (BRESP == 2'b00 && BVALID == 1 && memory_BREADY== 1) begin
+            $display("TEST PASSED: Write transfer succesful");
+        end     
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        wait (BVALID && BREADY);
+        
+        @(posedge clk);
+        #1;
+        
+        memory_BVALID = 0;
+        BREADY = 0;     
+        
+        @(posedge clk);
+        
+        // gpio
+        
+        AWADDR = 32'h1000_0004;
+        AWVALID = 1;
+        
+        gpio_AWREADY = 1;
+        
+        wait (AWVALID && AWREADY) begin
+            $display("AWVALID and AWREADY both equal to 1");
+        end
+        
+        @(posedge clk);
+        #1;
+        
+        if (gpio_AWVALID == 1 &&
+            gpio_AWADDR == 32'h1000_0004 &&
+            memory_AWVALID == 0) begin
+            $display("TEST PASSED: Memory address routed correctly");
+        end
+        else begin
+            $display("TEST FAILED: Memory address routing");
+        end 
+        
+        AWVALID = 0;
+        gpio_AWREADY = 0;      
+        
+        repeat (5) begin
+            @(posedge clk);
+        end  
+        
+        WDATA  = 32'd67;
+        WSTRB = 4'b1111;
+        WVALID = 1;   
+        
+        gpio_WREADY = 1;
+        #1;
+        
+        @(posedge clk);
+       
+        if (gpio_WVALID == 1 && gpio_WDATA == 32'd67 && gpio_WSTRB == 4'b1111 && WREADY == 1) begin
+            $display("TEST PASSED: Write data transfer succesful");
+        end     
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        if (memory_AWVALID == 0 && memory_WVALID == 0) begin
+            $display("TEST PASSED: Memory not involved");
+        end
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        #1;
+        
+        WVALID = 0;
+        gpio_WREADY = 0;
+        
+        @(posedge clk);
+        #1
+        
+        gpio_BRESP = 2'b00;
+        gpio_BVALID = 1;
+        BREADY = 1;
+        
+        #1;
+        
+        if (BRESP == 2'b00 && BVALID == 1 && gpio_BREADY== 1) begin
+            $display("TEST PASSED: Write transfer succesful");
+        end     
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        wait (BVALID && BREADY);
+        
+        @(posedge clk);
+        #1;
+        
+        gpio_BVALID = 0;
+        BREADY = 0;               
         
         $finish;
     end
