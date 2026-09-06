@@ -180,7 +180,6 @@ module axi_gpio_tb();
             $error("TEST FAILED: RVALID, RRESP and RDATA are NOT correct for GPIO read");
         end
         
-        ARVALID = 0;
         RREADY = 1;
         
         @(posedge clk);

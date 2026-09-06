@@ -183,7 +183,146 @@ module axi_uart_tb();
         
         BREADY = 0;
         
+        // TEST 2 : UART RX
         
+        repeat (2) begin
+            @(posedge clk);
+        end
+        #1; 
+        
+        // Sending RX 8'h41 first : 1 0 0 0 0 0 1 0
+        uart_rx_pin = 0;
+        repeat (868) begin
+            @(posedge clk);
+        end
+        #1;
+        uart_rx_pin = 1;
+        repeat (868) begin
+            @(posedge clk);
+        end
+        #1;
+        uart_rx_pin = 0;
+        repeat (868) begin
+            @(posedge clk);
+        end
+        #1;
+        uart_rx_pin = 0;
+        repeat (868) begin
+            @(posedge clk);
+        end
+        #1;
+        uart_rx_pin = 0;
+        repeat (868) begin
+            @(posedge clk);
+        end
+        #1;
+        uart_rx_pin = 0;
+        repeat (868) begin
+            @(posedge clk);
+        end
+        #1;
+        uart_rx_pin = 0;
+        repeat (868) begin
+            @(posedge clk);
+        end
+        #1;
+        uart_rx_pin = 1;
+        repeat (868) begin
+            @(posedge clk);
+        end
+        #1;
+        uart_rx_pin = 0;
+        repeat (868) begin
+            @(posedge clk);
+        end
+        #1;
+        uart_rx_pin = 1;
+        repeat (868) begin
+            @(posedge clk);
+        end
+        #1;
+        
+        wait (dut.rx_available);
+        #1;
+        
+        ARADDR = 32'h1000_1004;
+        ARVALID = 1;                
+
+        wait (ARVALID && ARREADY) begin
+            if (ARVALID && ARREADY) begin
+                $display("TEST PASSED: Address successful");
+            end
+            else begin
+                $error("TEST FAILED: Address failed");
+            end        
+        end        
+        
+        @(posedge clk);
+        #1;
+        
+        ARVALID = 0;
+        
+        if (RVALID == 1 && RRESP == 2'b00 && RDATA == 32'h0000_0041) begin
+            $display("TEST PASSED: RVALID, RRESP and RDATA are correct for UART read");
+        end
+        else begin
+            $error("TEST FAILED: RVALID, RRESP and RDATA are NOT correct for UART read");
+        end
+        
+        RREADY = 1;
+        
+        @(posedge clk);
+        #1;
+        
+        RREADY = 0;
+        
+        if (RVALID == 0) begin
+            $display("TEST PASSED: RVALID went back to 0 (idle)");
+        end
+        else begin
+            $error("TEST FAILED: RVALID DID NOT go back to 0 (not idle)");
+        end
+        
+        // TEST 3 : UART STATUS
+        
+        ARADDR = 32'h1000_1008;
+        ARVALID = 1;                
+
+        wait (ARVALID && ARREADY) begin
+            if (ARVALID && ARREADY) begin
+                $display("TEST PASSED: Address successful");
+            end
+            else begin
+                $error("TEST FAILED: Address failed");
+            end        
+        end        
+        
+        @(posedge clk);
+        #1;
+        
+        ARVALID = 0;
+        
+        if (RVALID == 1 && RRESP == 2'b00 && RDATA == 32'd0) begin // 0 because rx_available = 0 and tx_busy = 0
+            $display("TEST PASSED: RVALID, RRESP and RDATA are correct for UART STATUS");
+        end
+        else begin
+            $error("TEST FAILED: RVALID, RRESP and RDATA are NOT correct for UART STAUTS");
+        end
+        
+        RREADY = 1;
+        
+        @(posedge clk);
+        #1;
+        
+        RREADY = 0;
+        
+        if (RVALID == 0) begin
+            $display("TEST PASSED: RVALID went back to 0 (idle)");
+        end
+        else begin
+            $error("TEST FAILED: RVALID DID NOT go back to 0 (not idle)");
+        end
+
         $finish;
     end
     
