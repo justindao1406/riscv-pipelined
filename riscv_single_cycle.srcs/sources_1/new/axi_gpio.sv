@@ -17,7 +17,7 @@ module axi_gpio(
     
     input logic BREADY,
     
-    input logic [3:0] gpio_in,
+    input logic [3:0] gpio_in, // button -> gpio_in -> axi_gpio (axi reads the data)
     
     output logic ARREADY,
     output logic [31:0] RDATA,
@@ -30,7 +30,7 @@ module axi_gpio(
     output logic BVALID,
     output logic [1:0] BRESP,
     
-    output logic [3:0] gpio_out
+    output logic [3:0] gpio_out // axi_gpio -> gpio_out -> LED (axi is driving the signal outward)
     );
     
     logic write_pending;
@@ -55,19 +55,6 @@ module axi_gpio(
         else if (write_pending && BVALID) begin // B phase
             AWREADY = 0;
             WREADY = 0;
-        end
-    end
-    
-    // read comb
-    
-    always_comb begin
-        ARREADY = 0;
-    
-        if (!RVALID) begin
-            ARREADY = 1;
-        end
-        else if (RVALID) begin
-            ARREADY = 0;
         end
     end
     
@@ -99,6 +86,19 @@ module axi_gpio(
             write_pending <= 0;
             BVALID <= 0;
         end
+    end    
+    
+    // read comb
+    
+    always_comb begin
+        ARREADY = 0;
+    
+        if (!RVALID) begin
+            ARREADY = 1;
+        end
+        else if (RVALID) begin
+            ARREADY = 0;
+        end
     end
     
     // read ff
@@ -113,6 +113,7 @@ module axi_gpio(
         else if (ARVALID && ARREADY) begin
             RVALID <= 1;
             RRESP <= 2'b00;
+            RDATA <= 32'd0;
             if (ARADDR[11:0] == 12'h004) begin
                 RDATA <= {28'd0, gpio_in};
             end
