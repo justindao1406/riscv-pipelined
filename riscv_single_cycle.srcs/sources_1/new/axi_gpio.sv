@@ -125,7 +125,6 @@ module axi_gpio(
         else if (RVALID && RREADY) begin
             RVALID <= 0;
         end
-        
     end
     
 endmodule
