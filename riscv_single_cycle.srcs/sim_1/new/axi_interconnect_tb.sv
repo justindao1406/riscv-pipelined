@@ -44,6 +44,15 @@ module axi_interconnect_tb();
     logic uart_WREADY;
     logic [1:0] uart_BRESP;
     logic uart_BVALID;
+    
+    logic timer_ARREADY;
+    logic timer_AWREADY;
+    logic [31:0] timer_RDATA;
+    logic timer_RVALID;
+    logic [1:0] timer_RRESP;
+    logic timer_WREADY;
+    logic [1:0] timer_BRESP;
+    logic timer_BVALID;
 
     // Interconnect -> master
     logic ARREADY;
@@ -63,6 +72,8 @@ module axi_interconnect_tb();
     logic [31:0] gpio_AWADDR;
     logic [31:0] uart_ARADDR;
     logic [31:0] uart_AWADDR;
+    logic [31:0] timer_ARADDR;
+    logic [31:0] timer_AWADDR;
 
     logic memory_ARVALID;
     logic memory_AWVALID;
@@ -75,6 +86,10 @@ module axi_interconnect_tb();
     logic uart_ARVALID;
     logic uart_AWVALID;
     logic uart_RREADY;
+    
+    logic timer_ARVALID;
+    logic timer_AWVALID;
+    logic timer_RREADY;
 
     logic [31:0] memory_WDATA;
     logic [3:0] memory_WSTRB;
@@ -90,6 +105,11 @@ module axi_interconnect_tb();
     logic [3:0] uart_WSTRB;
     logic uart_WVALID;
     logic uart_BREADY;
+    
+    logic [31:0] timer_WDATA;
+    logic [3:0] timer_WSTRB;
+    logic timer_WVALID;
+    logic timer_BREADY;
 
 
     axi_interconnect dut (
@@ -133,6 +153,15 @@ module axi_interconnect_tb();
         .uart_WREADY(uart_WREADY),
         .uart_BRESP(uart_BRESP),
         .uart_BVALID(uart_BVALID),
+        
+        .timer_ARREADY(timer_ARREADY),
+        .timer_AWREADY(timer_AWREADY),
+        .timer_RDATA(timer_RDATA),
+        .timer_RVALID(timer_RVALID),
+        .timer_RRESP(timer_RRESP),
+        .timer_WREADY(timer_WREADY),
+        .timer_BRESP(timer_BRESP),
+        .timer_BVALID(timer_BVALID),
 
         .ARREADY(ARREADY),
         .RDATA(RDATA),
@@ -150,6 +179,8 @@ module axi_interconnect_tb();
         .gpio_AWADDR(gpio_AWADDR),
         .uart_ARADDR(uart_ARADDR),
         .uart_AWADDR(uart_AWADDR),
+        .timer_ARADDR(timer_ARADDR),
+        .timer_AWADDR(timer_AWADDR),
 
         .memory_ARVALID(memory_ARVALID),
         .memory_AWVALID(memory_AWVALID),
@@ -162,6 +193,10 @@ module axi_interconnect_tb();
         .uart_ARVALID(uart_ARVALID),
         .uart_AWVALID(uart_AWVALID),
         .uart_RREADY(uart_RREADY),
+        
+        .timer_ARVALID(timer_ARVALID),
+        .timer_AWVALID(timer_AWVALID),
+        .timer_RREADY(timer_RREADY),
 
         .memory_WDATA(memory_WDATA),
         .memory_WSTRB(memory_WSTRB),
@@ -176,7 +211,12 @@ module axi_interconnect_tb();
         .uart_WDATA(uart_WDATA),
         .uart_WSTRB(uart_WSTRB),
         .uart_WVALID(uart_WVALID),
-        .uart_BREADY(uart_BREADY)
+        .uart_BREADY(uart_BREADY),
+        
+        .timer_WDATA(timer_WDATA),
+        .timer_WSTRB(timer_WSTRB),
+        .timer_WVALID(timer_WVALID),
+        .timer_BREADY(timer_BREADY)
     );
     
     initial begin
@@ -215,6 +255,14 @@ module axi_interconnect_tb();
         uart_WREADY = 0;
         uart_BRESP = 0;
         uart_BVALID = 0;
+        timer_ARREADY = 0;
+        timer_AWREADY = 0;
+        timer_RDATA = 0;
+        timer_RVALID = 0;
+        timer_RRESP = 0;
+        timer_WREADY = 0;
+        timer_BRESP = 0;
+        timer_BVALID = 0;
         
         repeat (2) begin
             @(posedge clk);
@@ -239,7 +287,8 @@ module axi_interconnect_tb();
         if (memory_ARVALID == 1 &&
             memory_ARADDR == 32'h0000_0004 &&
             gpio_ARVALID == 0 &&
-            uart_ARVALID == 0) begin
+            uart_ARVALID == 0 &&
+            timer_ARVALID == 0) begin
             $display("TEST PASSED: Memory address routed correctly");
         end
         else begin
@@ -271,8 +320,9 @@ module axi_interconnect_tb();
         end
         
         if (gpio_ARVALID == 0 && gpio_RREADY == 0 &&
-            uart_ARVALID == 0 && uart_RREADY == 0) begin
-            $display("TEST PASSED: GPIO and UART not involved");
+            uart_ARVALID == 0 && uart_RREADY == 0 &&
+            timer_ARVALID == 0 && timer_RREADY == 0) begin
+            $display("TEST PASSED: GPIO, UART and TIMER not involved");
         end
         else begin
             $display("TEST FAILED");
@@ -302,7 +352,8 @@ module axi_interconnect_tb();
         if (gpio_ARVALID == 1 &&
             gpio_ARADDR == 32'h1000_0008 &&
             memory_ARVALID == 0 &&
-            uart_ARVALID == 0) begin
+            uart_ARVALID == 0 &&
+            timer_ARVALID == 0) begin
             $display("TEST PASSED: GPIO address routed correctly");
         end
         else begin
@@ -335,8 +386,9 @@ module axi_interconnect_tb();
         end
         
         if (memory_ARVALID == 0 && memory_RREADY == 0 &&
-            uart_ARVALID == 0 && uart_RREADY == 0) begin
-            $display("TEST PASSED: Memory and UART not involved");
+            uart_ARVALID == 0 && uart_RREADY == 0 &&
+            timer_ARVALID == 0 && timer_RREADY == 0) begin
+            $display("TEST PASSED: Memory, UART and TIMER not involved");
         end
         else begin
             $display("TEST FAILED");
@@ -366,7 +418,8 @@ module axi_interconnect_tb();
         if (uart_ARVALID == 1 &&
             uart_ARADDR == 32'h1000_1004 &&
             memory_ARVALID == 0 &&
-            gpio_ARVALID == 0) begin
+            gpio_ARVALID == 0 &&
+            timer_ARVALID == 0) begin
             $display("TEST PASSED: UART address routed correctly");
         end
         else begin
@@ -399,8 +452,9 @@ module axi_interconnect_tb();
         end
         
         if (memory_ARVALID == 0 && memory_RREADY == 0 &&
-            gpio_ARVALID == 0 && gpio_RREADY == 0) begin
-            $display("TEST PASSED: Memory and GPIO not involved");
+            gpio_ARVALID == 0 && gpio_RREADY == 0 &&
+            timer_ARVALID == 0 && timer_RREADY == 0) begin
+            $display("TEST PASSED: Memory, GPIO and TIMER not involved");
         end
         else begin
             $display("TEST FAILED");
@@ -412,6 +466,72 @@ module axi_interconnect_tb();
         #1;
         
         uart_RVALID = 0;
+        RREADY = 0;
+        
+        // timer
+        
+        @(posedge clk);
+        
+        ARADDR = 32'h1000_2004;
+        ARVALID = 1;
+        
+        timer_ARREADY = 1;
+        
+        wait (ARVALID && ARREADY) begin
+            $display("ARVALID and ARREADY both equal to 1");
+        end
+        
+        if (timer_ARVALID == 1 &&
+            timer_ARADDR == 32'h1000_2004 &&
+            memory_ARVALID == 0 &&
+            gpio_ARVALID == 0 &&
+            uart_ARVALID == 0) begin
+            $display("TEST PASSED: TIMER address routed correctly");
+        end
+        else begin
+            $display("TEST FAILED: TIMER address routing");
+        end
+        
+        @(posedge clk);
+        #1;
+        
+        ARVALID = 0;
+        timer_ARREADY = 0;
+        
+        repeat (5) begin
+            @(posedge clk);
+        end  
+        
+        timer_RDATA  = 32'd73;
+        timer_RRESP  = 2'b00;
+        timer_RVALID = 1;   
+        
+        RREADY = 1;
+        
+        #1;
+       
+        if (RVALID == 1 && RDATA == 32'd73 && RRESP == 2'b00 && timer_RREADY == 1) begin
+            $display("TEST PASSED: Read transfer succesful");
+        end     
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        if (memory_ARVALID == 0 && memory_RREADY == 0 &&
+            gpio_ARVALID == 0 && gpio_RREADY == 0 &&
+            uart_ARVALID == 0 && uart_RREADY == 0) begin
+            $display("TEST PASSED: Memory, GPIO and UART not involved");
+        end
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        wait (RVALID && RREADY);
+        
+        @(posedge clk);
+        #1;
+        
+        timer_RVALID = 0;
         RREADY = 0;
         
         // ---------------------------------- WRITE ----------------------------------        
@@ -433,7 +553,8 @@ module axi_interconnect_tb();
         if (memory_AWVALID == 1 &&
             memory_AWADDR == 32'h0000_0004 &&
             gpio_AWVALID == 0 &&
-            uart_AWVALID == 0) begin
+            uart_AWVALID == 0 &&
+            timer_AWVALID == 0) begin
             $display("TEST PASSED: Memory address routed correctly");
         end
         else begin
@@ -469,8 +590,9 @@ module axi_interconnect_tb();
         end
         
         if (gpio_AWVALID == 0 && gpio_WVALID == 0 &&
-            uart_AWVALID == 0 && uart_WVALID == 0) begin
-            $display("TEST PASSED: GPIO and UART not involved");
+            uart_AWVALID == 0 && uart_WVALID == 0 &&
+            timer_AWVALID == 0 && timer_WVALID == 0) begin
+            $display("TEST PASSED: GPIO, UART and TIMER not involved");
         end
         else begin
             $display("TEST FAILED");
@@ -524,7 +646,8 @@ module axi_interconnect_tb();
         if (gpio_AWVALID == 1 &&
             gpio_AWADDR == 32'h1000_0004 &&
             memory_AWVALID == 0 &&
-            uart_AWVALID == 0) begin
+            uart_AWVALID == 0 &&
+            timer_AWVALID == 0) begin
             $display("TEST PASSED: GPIO address routed correctly");
         end
         else begin
@@ -555,8 +678,9 @@ module axi_interconnect_tb();
         end
         
         if (memory_AWVALID == 0 && memory_WVALID == 0 &&
-            uart_AWVALID == 0 && uart_WVALID == 0) begin
-            $display("TEST PASSED: Memory and UART not involved");
+            uart_AWVALID == 0 && uart_WVALID == 0 &&
+            timer_AWVALID == 0 && timer_WVALID == 0) begin
+            $display("TEST PASSED: Memory, UART and TIMER not involved");
         end
         else begin
             $display("TEST FAILED");
@@ -610,7 +734,8 @@ module axi_interconnect_tb();
         if (uart_AWVALID == 1 &&
             uart_AWADDR == 32'h1000_1000 &&
             memory_AWVALID == 0 &&
-            gpio_AWVALID == 0) begin
+            gpio_AWVALID == 0 &&
+            timer_AWVALID == 0) begin
             $display("TEST PASSED: UART address routed correctly");
         end
         else begin
@@ -641,8 +766,9 @@ module axi_interconnect_tb();
         end
         
         if (memory_AWVALID == 0 && memory_WVALID == 0 &&
-            gpio_AWVALID == 0 && gpio_WVALID == 0) begin
-            $display("TEST PASSED: Memory and GPIO not involved");
+            gpio_AWVALID == 0 && gpio_WVALID == 0 &&
+            timer_AWVALID == 0 && timer_WVALID == 0) begin
+            $display("TEST PASSED: Memory, GPIO and TIMER not involved");
         end
         else begin
             $display("TEST FAILED");
@@ -675,6 +801,94 @@ module axi_interconnect_tb();
         #1;
         
         uart_BVALID = 0;
+        BREADY = 0;               
+        
+        @(posedge clk);
+        
+        // timer
+        
+        AWADDR = 32'h1000_2004;
+        AWVALID = 1;
+        
+        timer_AWREADY = 1;
+        
+        wait (AWVALID && AWREADY) begin
+            $display("AWVALID and AWREADY both equal to 1");
+        end
+        
+        @(posedge clk);
+        #1;
+        
+        if (timer_AWVALID == 1 &&
+            timer_AWADDR == 32'h1000_2004 &&
+            memory_AWVALID == 0 &&
+            gpio_AWVALID == 0 &&
+            uart_AWVALID == 0) begin
+            $display("TEST PASSED: TIMER address routed correctly");
+        end
+        else begin
+            $display("TEST FAILED: TIMER address routing");
+        end 
+        
+        AWVALID = 0;
+        timer_AWREADY = 0;      
+        
+        repeat (5) begin
+            @(posedge clk);
+        end  
+        
+        WDATA  = 32'd73;
+        WSTRB = 4'b1111;
+        WVALID = 1;   
+        
+        timer_WREADY = 1;
+        #1;
+        
+        @(posedge clk);
+       
+        if (timer_WVALID == 1 && timer_WDATA == 32'd73 && timer_WSTRB == 4'b1111 && WREADY == 1) begin
+            $display("TEST PASSED: Write data transfer succesful");
+        end     
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        if (memory_AWVALID == 0 && memory_WVALID == 0 &&
+            gpio_AWVALID == 0 && gpio_WVALID == 0 &&
+            uart_AWVALID == 0 && uart_WVALID == 0) begin
+            $display("TEST PASSED: Memory, GPIO and UART not involved");
+        end
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        #1;
+        
+        WVALID = 0;
+        timer_WREADY = 0;
+        
+        @(posedge clk);
+        #1
+        
+        timer_BRESP = 2'b00;
+        timer_BVALID = 1;
+        BREADY = 1;
+        
+        #1;
+        
+        if (BRESP == 2'b00 && BVALID == 1 && timer_BREADY == 1) begin
+            $display("TEST PASSED: Write transfer succesful");
+        end     
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        wait (BVALID && BREADY);
+        
+        @(posedge clk);
+        #1;
+        
+        timer_BVALID = 0;
         BREADY = 0;               
         
         $finish;

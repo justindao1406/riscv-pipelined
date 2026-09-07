@@ -42,6 +42,14 @@ module axi_interconnect(
     input logic uart_WREADY,
     input logic [1:0] uart_BRESP,
     input logic uart_BVALID,
+    input logic timer_ARREADY,
+    input logic timer_AWREADY,
+    input logic [31:0] timer_RDATA,
+    input logic timer_RVALID,
+    input logic [1:0] timer_RRESP,
+    input logic timer_WREADY,
+    input logic [1:0] timer_BRESP,
+    input logic timer_BVALID,
     
     // output: slave (interconnect) -> master (AXI master)
     output logic ARREADY,
@@ -61,6 +69,8 @@ module axi_interconnect(
     output logic [31:0] gpio_AWADDR,
     output logic [31:0] uart_ARADDR,
     output logic [31:0] uart_AWADDR,
+    output logic [31:0] timer_ARADDR,
+    output logic [31:0] timer_AWADDR,    
     output logic memory_ARVALID,
     output logic memory_AWVALID,
     output logic memory_RREADY,
@@ -70,6 +80,9 @@ module axi_interconnect(
     output logic uart_ARVALID,
     output logic uart_AWVALID,
     output logic uart_RREADY,
+    output logic timer_ARVALID,
+    output logic timer_AWVALID,
+    output logic timer_RREADY,    
     output logic [31:0] memory_WDATA,
     output logic [3:0] memory_WSTRB,
     output logic memory_WVALID,
@@ -81,7 +94,11 @@ module axi_interconnect(
     output logic [31:0] uart_WDATA,
     output logic [3:0] uart_WSTRB,
     output logic uart_WVALID,
-    output logic uart_BREADY
+    output logic uart_BREADY,
+    output logic [31:0] timer_WDATA,
+    output logic [3:0] timer_WSTRB,
+    output logic timer_WVALID,
+    output logic timer_BREADY    
     );
     
     // select flags
@@ -89,29 +106,33 @@ module axi_interconnect(
     logic memory_read_select;
     logic gpio_read_select;
     logic uart_read_select;
+    logic timer_read_select;
     
     logic memory_write_select;
     logic gpio_write_select;
     logic uart_write_select;
+    logic timer_write_select;
     
     // read transaction tracker
     
-    typedef enum logic [1:0] {
+    typedef enum logic [2:0] {
         READ_NONE,
         READ_MEMORY,
         READ_GPIO,
-        READ_UART
+        READ_UART,
+        READ_TIMER
     } read_owner_t;
     
     read_owner_t read_owner;
     
     // write transaction tracker
     
-    typedef enum logic [1:0] {
+    typedef enum logic [2:0] {
         WRITE_NONE,
         WRITE_MEMORY,
         WRITE_GPIO,
-        WRITE_UART
+        WRITE_UART,
+        WRITE_TIMER
     } write_owner_t;
     
     write_owner_t write_owner;
@@ -122,21 +143,27 @@ module axi_interconnect(
         memory_read_select = 0;
         gpio_read_select = 0;
         uart_read_select = 0;
+        timer_read_select = 0;
         memory_write_select = 0;
         gpio_write_select = 0;
         uart_write_select = 0;
+        timer_write_select = 0;
         memory_ARVALID = 0;
         gpio_ARVALID = 0;
         uart_ARVALID = 0;
+        timer_ARVALID = 0;
         memory_AWVALID = 0;
         gpio_AWVALID = 0;    
         uart_AWVALID = 0;
+        timer_AWVALID = 0;
         memory_ARADDR = 32'd0;
         memory_AWADDR = 32'd0;
         gpio_ARADDR = 32'd0;
         gpio_AWADDR = 32'd0;   
         uart_ARADDR = 32'd0;
-        uart_AWADDR = 32'd0;        
+        uart_AWADDR = 32'd0;     
+        timer_ARADDR = 32'd0;
+        timer_AWADDR = 32'd0;                 
     
         if (ARADDR[31:16] == 16'h0000) begin
             memory_read_select = 1;
@@ -172,6 +199,18 @@ module axi_interconnect(
             uart_AWADDR   = AWADDR;
             uart_AWVALID = AWVALID;
         end
+        
+        if (ARADDR[31:12] == 20'h10002) begin
+            timer_read_select = 1;
+            timer_ARADDR   = ARADDR;
+            timer_ARVALID = ARVALID;
+        end   
+        
+        if (AWADDR[31:12] == 20'h10002) begin
+            timer_write_select = 1;
+            timer_AWADDR   = AWADDR;
+            timer_AWVALID = AWVALID;
+        end        
     end
     
     always_comb begin
@@ -183,6 +222,7 @@ module axi_interconnect(
         memory_RREADY = 0;
         gpio_RREADY = 0;
         uart_RREADY = 0;
+        timer_RREADY = 0;
         memory_WDATA = 0;
         memory_WSTRB = 0;
         memory_WVALID = 0;
@@ -192,12 +232,16 @@ module axi_interconnect(
         uart_WDATA = 0;
         uart_WSTRB = 0;
         uart_WVALID = 0;
+        timer_WDATA = 0;
+        timer_WSTRB = 0;
+        timer_WVALID = 0;        
         WREADY = 0;
         BRESP = 0;
         BVALID = 0;
         memory_BREADY = 0;
         gpio_BREADY = 0;
         uart_BREADY = 0;
+        timer_BREADY = 0;
     
         // sends READY address back to master
     
@@ -219,6 +263,12 @@ module axi_interconnect(
         if (uart_write_select) begin
             AWREADY = uart_AWREADY;
         end
+        if (timer_read_select) begin
+            ARREADY = timer_ARREADY;     
+        end
+        if (timer_write_select) begin
+            AWREADY = timer_AWREADY;
+        end        
         
         // read data
         
@@ -243,7 +293,14 @@ module axi_interconnect(
             RVALID = uart_RVALID;
             RRESP = uart_RRESP;
             uart_RREADY = RREADY;
-        end           
+        end        
+        
+        if (read_owner == READ_TIMER) begin
+            RDATA = timer_RDATA;
+            RVALID = timer_RVALID;
+            RRESP = timer_RRESP;
+            timer_RREADY = RREADY;
+        end              
         
         // write data + validation 
         
@@ -277,6 +334,15 @@ module axi_interconnect(
             uart_BREADY = BREADY;               
         end
         
+        if (write_owner == WRITE_TIMER) begin
+            timer_WDATA = WDATA;
+            timer_WSTRB = WSTRB;
+            timer_WVALID = WVALID;
+            WREADY = timer_WREADY;         
+            BRESP = timer_BRESP;
+            BVALID = timer_BVALID;
+            timer_BREADY = BREADY;               
+        end        
     end
     
     // Keeps track of owner (owner = peripheral responsible for sending data to master)
@@ -301,6 +367,10 @@ module axi_interconnect(
         else if (uart_read_select && ARVALID && ARREADY) begin
             read_owner <= READ_UART;
         end
+        
+        else if (timer_read_select && ARVALID && ARREADY) begin
+            read_owner <= READ_TIMER;
+        end        
     end
     
         always_ff @(posedge clk) begin
@@ -322,6 +392,10 @@ module axi_interconnect(
         
         else if (uart_write_select && AWVALID && AWREADY) begin
             write_owner <= WRITE_UART;
+        end
+        
+        else if (timer_write_select && AWVALID && AWREADY) begin
+            write_owner <= WRITE_TIMER;
         end
     end
     
