@@ -33,7 +33,15 @@ module axi_interconnect(
     input logic [1:0] gpio_RRESP,
     input logic gpio_WREADY,
     input logic [1:0] gpio_BRESP,
-    input logic gpio_BVALID,
+    input logic gpio_BVALID,   
+    input logic uart_ARREADY,
+    input logic uart_AWREADY,
+    input logic [31:0] uart_RDATA,
+    input logic uart_RVALID,
+    input logic [1:0] uart_RRESP,
+    input logic uart_WREADY,
+    input logic [1:0] uart_BRESP,
+    input logic uart_BVALID,
     
     // output: slave (interconnect) -> master (AXI master)
     output logic ARREADY,
@@ -51,12 +59,17 @@ module axi_interconnect(
     output logic [31:0] memory_AWADDR,
     output logic [31:0] gpio_ARADDR,
     output logic [31:0] gpio_AWADDR,
+    output logic [31:0] uart_ARADDR,
+    output logic [31:0] uart_AWADDR,
     output logic memory_ARVALID,
     output logic memory_AWVALID,
     output logic memory_RREADY,
     output logic gpio_ARVALID,
     output logic gpio_AWVALID,
     output logic gpio_RREADY,
+    output logic uart_ARVALID,
+    output logic uart_AWVALID,
+    output logic uart_RREADY,
     output logic [31:0] memory_WDATA,
     output logic [3:0] memory_WSTRB,
     output logic memory_WVALID,
@@ -64,23 +77,30 @@ module axi_interconnect(
     output logic [31:0] gpio_WDATA,
     output logic [3:0] gpio_WSTRB,
     output logic gpio_WVALID,
-    output logic gpio_BREADY
+    output logic gpio_BREADY,
+    output logic [31:0] uart_WDATA,
+    output logic [3:0] uart_WSTRB,
+    output logic uart_WVALID,
+    output logic uart_BREADY
     );
     
     // select flags
     
     logic memory_read_select;
     logic gpio_read_select;
+    logic uart_read_select;
     
     logic memory_write_select;
     logic gpio_write_select;
+    logic uart_write_select;
     
     // read transaction tracker
     
     typedef enum logic [1:0] {
         READ_NONE,
         READ_MEMORY,
-        READ_GPIO
+        READ_GPIO,
+        READ_UART
     } read_owner_t;
     
     read_owner_t read_owner;
@@ -90,7 +110,8 @@ module axi_interconnect(
     typedef enum logic [1:0] {
         WRITE_NONE,
         WRITE_MEMORY,
-        WRITE_GPIO
+        WRITE_GPIO,
+        WRITE_UART
     } write_owner_t;
     
     write_owner_t write_owner;
@@ -98,18 +119,24 @@ module axi_interconnect(
     // pick the peripheral + provide VALID to slave
     
     always_comb begin
-        memory_read_select  = 0;
-        gpio_read_select    = 0;
+        memory_read_select = 0;
+        gpio_read_select = 0;
+        uart_read_select = 0;
         memory_write_select = 0;
-        gpio_write_select   = 0;
+        gpio_write_select = 0;
+        uart_write_select = 0;
         memory_ARVALID = 0;
-        gpio_ARVALID   = 0;
+        gpio_ARVALID = 0;
+        uart_ARVALID = 0;
         memory_AWVALID = 0;
-        gpio_AWVALID   = 0;    
+        gpio_AWVALID = 0;    
+        uart_AWVALID = 0;
         memory_ARADDR = 32'd0;
         memory_AWADDR = 32'd0;
         gpio_ARADDR = 32'd0;
-        gpio_AWADDR = 32'd0;           
+        gpio_AWADDR = 32'd0;   
+        uart_ARADDR = 32'd0;
+        uart_AWADDR = 32'd0;        
     
         if (ARADDR[31:16] == 16'h0000) begin
             memory_read_select = 1;
@@ -133,6 +160,18 @@ module axi_interconnect(
             gpio_AWADDR   = AWADDR;
             gpio_AWVALID = AWVALID;
         end
+        
+        if (ARADDR[31:12] == 20'h10001) begin
+            uart_read_select = 1;
+            uart_ARADDR   = ARADDR;
+            uart_ARVALID = ARVALID;
+        end   
+        
+        if (AWADDR[31:12] == 20'h10001) begin
+            uart_write_select = 1;
+            uart_AWADDR   = AWADDR;
+            uart_AWVALID = AWVALID;
+        end
     end
     
     always_comb begin
@@ -143,17 +182,22 @@ module axi_interconnect(
         RRESP = 0;
         memory_RREADY = 0;
         gpio_RREADY = 0;
+        uart_RREADY = 0;
         memory_WDATA = 0;
         memory_WSTRB = 0;
         memory_WVALID = 0;
         gpio_WDATA = 0;
         gpio_WSTRB = 0;
         gpio_WVALID = 0;
+        uart_WDATA = 0;
+        uart_WSTRB = 0;
+        uart_WVALID = 0;
         WREADY = 0;
         BRESP = 0;
         BVALID = 0;
         memory_BREADY = 0;
         gpio_BREADY = 0;
+        uart_BREADY = 0;
     
         // sends READY address back to master
     
@@ -168,6 +212,12 @@ module axi_interconnect(
         end
         if (gpio_write_select) begin
             AWREADY = gpio_AWREADY;
+        end
+        if (uart_read_select) begin
+            ARREADY = uart_ARREADY;     
+        end
+        if (uart_write_select) begin
+            AWREADY = uart_AWREADY;
         end
         
         // read data
@@ -186,7 +236,14 @@ module axi_interconnect(
             RVALID = gpio_RVALID;
             RRESP = gpio_RRESP;
             gpio_RREADY = RREADY;
-        end         
+        end     
+        
+        if (read_owner == READ_UART) begin
+            RDATA = uart_RDATA;
+            RVALID = uart_RVALID;
+            RRESP = uart_RRESP;
+            uart_RREADY = RREADY;
+        end           
         
         // write data + validation 
         
@@ -210,6 +267,16 @@ module axi_interconnect(
             gpio_BREADY = BREADY;               
         end
         
+        if (write_owner == WRITE_UART) begin
+            uart_WDATA = WDATA;
+            uart_WSTRB = WSTRB;
+            uart_WVALID = WVALID;
+            WREADY = uart_WREADY;         
+            BRESP = uart_BRESP;
+            BVALID = uart_BVALID;
+            uart_BREADY = BREADY;               
+        end
+        
     end
     
     // Keeps track of owner (owner = peripheral responsible for sending data to master)
@@ -230,6 +297,10 @@ module axi_interconnect(
         else if (gpio_read_select && ARVALID && ARREADY) begin
             read_owner <= READ_GPIO;
         end
+        
+        else if (uart_read_select && ARVALID && ARREADY) begin
+            read_owner <= READ_UART;
+        end
     end
     
         always_ff @(posedge clk) begin
@@ -247,6 +318,10 @@ module axi_interconnect(
         
         else if (gpio_write_select && AWVALID && AWREADY) begin
             write_owner <= WRITE_GPIO;
+        end
+        
+        else if (uart_write_select && AWVALID && AWREADY) begin
+            write_owner <= WRITE_UART;
         end
     end
     
