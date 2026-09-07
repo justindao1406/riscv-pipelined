@@ -35,6 +35,15 @@ module axi_interconnect_tb();
     logic gpio_WREADY;
     logic [1:0] gpio_BRESP;
     logic gpio_BVALID;
+    
+    logic uart_ARREADY;
+    logic uart_AWREADY;
+    logic [31:0] uart_RDATA;
+    logic uart_RVALID;
+    logic [1:0] uart_RRESP;
+    logic uart_WREADY;
+    logic [1:0] uart_BRESP;
+    logic uart_BVALID;
 
     // Interconnect -> master
     logic ARREADY;
@@ -52,6 +61,8 @@ module axi_interconnect_tb();
     logic [31:0] memory_AWADDR;
     logic [31:0] gpio_ARADDR;
     logic [31:0] gpio_AWADDR;
+    logic [31:0] uart_ARADDR;
+    logic [31:0] uart_AWADDR;
 
     logic memory_ARVALID;
     logic memory_AWVALID;
@@ -60,6 +71,10 @@ module axi_interconnect_tb();
     logic gpio_ARVALID;
     logic gpio_AWVALID;
     logic gpio_RREADY;
+    
+    logic uart_ARVALID;
+    logic uart_AWVALID;
+    logic uart_RREADY;
 
     logic [31:0] memory_WDATA;
     logic [3:0] memory_WSTRB;
@@ -70,6 +85,11 @@ module axi_interconnect_tb();
     logic [3:0] gpio_WSTRB;
     logic gpio_WVALID;
     logic gpio_BREADY;
+    
+    logic [31:0] uart_WDATA;
+    logic [3:0] uart_WSTRB;
+    logic uart_WVALID;
+    logic uart_BREADY;
 
 
     axi_interconnect dut (
@@ -104,6 +124,15 @@ module axi_interconnect_tb();
         .gpio_WREADY(gpio_WREADY),
         .gpio_BRESP(gpio_BRESP),
         .gpio_BVALID(gpio_BVALID),
+        
+        .uart_ARREADY(uart_ARREADY),
+        .uart_AWREADY(uart_AWREADY),
+        .uart_RDATA(uart_RDATA),
+        .uart_RVALID(uart_RVALID),
+        .uart_RRESP(uart_RRESP),
+        .uart_WREADY(uart_WREADY),
+        .uart_BRESP(uart_BRESP),
+        .uart_BVALID(uart_BVALID),
 
         .ARREADY(ARREADY),
         .RDATA(RDATA),
@@ -119,6 +148,8 @@ module axi_interconnect_tb();
         .memory_AWADDR(memory_AWADDR),
         .gpio_ARADDR(gpio_ARADDR),
         .gpio_AWADDR(gpio_AWADDR),
+        .uart_ARADDR(uart_ARADDR),
+        .uart_AWADDR(uart_AWADDR),
 
         .memory_ARVALID(memory_ARVALID),
         .memory_AWVALID(memory_AWVALID),
@@ -127,6 +158,10 @@ module axi_interconnect_tb();
         .gpio_ARVALID(gpio_ARVALID),
         .gpio_AWVALID(gpio_AWVALID),
         .gpio_RREADY(gpio_RREADY),
+        
+        .uart_ARVALID(uart_ARVALID),
+        .uart_AWVALID(uart_AWVALID),
+        .uart_RREADY(uart_RREADY),
 
         .memory_WDATA(memory_WDATA),
         .memory_WSTRB(memory_WSTRB),
@@ -136,7 +171,12 @@ module axi_interconnect_tb();
         .gpio_WDATA(gpio_WDATA),
         .gpio_WSTRB(gpio_WSTRB),
         .gpio_WVALID(gpio_WVALID),
-        .gpio_BREADY(gpio_BREADY)
+        .gpio_BREADY(gpio_BREADY),
+        
+        .uart_WDATA(uart_WDATA),
+        .uart_WSTRB(uart_WSTRB),
+        .uart_WVALID(uart_WVALID),
+        .uart_BREADY(uart_BREADY)
     );
     
     initial begin
@@ -167,6 +207,14 @@ module axi_interconnect_tb();
         gpio_WREADY = 0;
         gpio_BRESP = 0;
         gpio_BVALID = 0;
+        uart_ARREADY = 0;
+        uart_AWREADY = 0;
+        uart_RDATA = 0;
+        uart_RVALID = 0;
+        uart_RRESP = 0;
+        uart_WREADY = 0;
+        uart_BRESP = 0;
+        uart_BVALID = 0;
         
         repeat (2) begin
             @(posedge clk);
@@ -190,7 +238,8 @@ module axi_interconnect_tb();
         
         if (memory_ARVALID == 1 &&
             memory_ARADDR == 32'h0000_0004 &&
-            gpio_ARVALID == 0) begin
+            gpio_ARVALID == 0 &&
+            uart_ARVALID == 0) begin
             $display("TEST PASSED: Memory address routed correctly");
         end
         else begin
@@ -221,8 +270,9 @@ module axi_interconnect_tb();
             $display("TEST FAILED");
         end
         
-        if (gpio_ARVALID == 0 && gpio_RREADY == 0) begin
-            $display("TEST PASSED: GPIO not involved");
+        if (gpio_ARVALID == 0 && gpio_RREADY == 0 &&
+            uart_ARVALID == 0 && uart_RREADY == 0) begin
+            $display("TEST PASSED: GPIO and UART not involved");
         end
         else begin
             $display("TEST FAILED");
@@ -251,7 +301,8 @@ module axi_interconnect_tb();
         
         if (gpio_ARVALID == 1 &&
             gpio_ARADDR == 32'h1000_0008 &&
-            memory_ARVALID == 0) begin
+            memory_ARVALID == 0 &&
+            uart_ARVALID == 0) begin
             $display("TEST PASSED: GPIO address routed correctly");
         end
         else begin
@@ -283,8 +334,9 @@ module axi_interconnect_tb();
             $display("TEST FAILED");
         end
         
-        if (memory_ARVALID == 0 && memory_RREADY == 0) begin
-            $display("TEST PASSED: Memory not involved");
+        if (memory_ARVALID == 0 && memory_RREADY == 0 &&
+            uart_ARVALID == 0 && uart_RREADY == 0) begin
+            $display("TEST PASSED: Memory and UART not involved");
         end
         else begin
             $display("TEST FAILED");
@@ -296,6 +348,70 @@ module axi_interconnect_tb();
         #1;
         
         gpio_RVALID = 0;
+        RREADY = 0;
+        
+        // uart
+        
+        @(posedge clk);
+        
+        ARADDR = 32'h1000_1004;
+        ARVALID = 1;
+        
+        uart_ARREADY = 1;
+        
+        wait (ARVALID && ARREADY) begin
+            $display("ARVALID and ARREADY both equal to 1");
+        end
+        
+        if (uart_ARVALID == 1 &&
+            uart_ARADDR == 32'h1000_1004 &&
+            memory_ARVALID == 0 &&
+            gpio_ARVALID == 0) begin
+            $display("TEST PASSED: UART address routed correctly");
+        end
+        else begin
+            $display("TEST FAILED: UART address routing");
+        end
+        
+        @(posedge clk);
+        #1;
+        
+        ARVALID = 0;
+        uart_ARREADY = 0;
+        
+        repeat (5) begin
+            @(posedge clk);
+        end  
+        
+        uart_RDATA  = 32'd71;
+        uart_RRESP  = 2'b00;
+        uart_RVALID = 1;   
+        
+        RREADY = 1;
+        
+        #1;
+       
+        if (RVALID == 1 && RDATA == 32'd71 && RRESP == 2'b00 && uart_RREADY == 1) begin
+            $display("TEST PASSED: Read transfer succesful");
+        end     
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        if (memory_ARVALID == 0 && memory_RREADY == 0 &&
+            gpio_ARVALID == 0 && gpio_RREADY == 0) begin
+            $display("TEST PASSED: Memory and GPIO not involved");
+        end
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        wait (RVALID && RREADY);
+        
+        @(posedge clk);
+        #1;
+        
+        uart_RVALID = 0;
         RREADY = 0;
         
         // ---------------------------------- WRITE ----------------------------------        
@@ -316,7 +432,8 @@ module axi_interconnect_tb();
         
         if (memory_AWVALID == 1 &&
             memory_AWADDR == 32'h0000_0004 &&
-            gpio_AWVALID == 0) begin
+            gpio_AWVALID == 0 &&
+            uart_AWVALID == 0) begin
             $display("TEST PASSED: Memory address routed correctly");
         end
         else begin
@@ -351,8 +468,9 @@ module axi_interconnect_tb();
             $display("TEST FAILED");
         end
         
-        if (gpio_AWVALID == 0 && gpio_WVALID == 0) begin
-            $display("TEST PASSED: GPIO not involved");
+        if (gpio_AWVALID == 0 && gpio_WVALID == 0 &&
+            uart_AWVALID == 0 && uart_WVALID == 0) begin
+            $display("TEST PASSED: GPIO and UART not involved");
         end
         else begin
             $display("TEST FAILED");
@@ -372,7 +490,7 @@ module axi_interconnect_tb();
         
         #1;
         
-        if (BRESP == 2'b00 && BVALID == 1 && memory_BREADY== 1) begin
+        if (BRESP == 2'b00 && BVALID == 1 && memory_BREADY == 1) begin
             $display("TEST PASSED: Write transfer succesful");
         end     
         else begin
@@ -405,11 +523,12 @@ module axi_interconnect_tb();
         
         if (gpio_AWVALID == 1 &&
             gpio_AWADDR == 32'h1000_0004 &&
-            memory_AWVALID == 0) begin
-            $display("TEST PASSED: Memory address routed correctly");
+            memory_AWVALID == 0 &&
+            uart_AWVALID == 0) begin
+            $display("TEST PASSED: GPIO address routed correctly");
         end
         else begin
-            $display("TEST FAILED: Memory address routing");
+            $display("TEST FAILED: GPIO address routing");
         end 
         
         AWVALID = 0;
@@ -435,8 +554,9 @@ module axi_interconnect_tb();
             $display("TEST FAILED");
         end
         
-        if (memory_AWVALID == 0 && memory_WVALID == 0) begin
-            $display("TEST PASSED: Memory not involved");
+        if (memory_AWVALID == 0 && memory_WVALID == 0 &&
+            uart_AWVALID == 0 && uart_WVALID == 0) begin
+            $display("TEST PASSED: Memory and UART not involved");
         end
         else begin
             $display("TEST FAILED");
@@ -456,7 +576,7 @@ module axi_interconnect_tb();
         
         #1;
         
-        if (BRESP == 2'b00 && BVALID == 1 && gpio_BREADY== 1) begin
+        if (BRESP == 2'b00 && BVALID == 1 && gpio_BREADY == 1) begin
             $display("TEST PASSED: Write transfer succesful");
         end     
         else begin
@@ -469,6 +589,92 @@ module axi_interconnect_tb();
         #1;
         
         gpio_BVALID = 0;
+        BREADY = 0;               
+        
+        @(posedge clk);
+        
+        // uart
+        
+        AWADDR = 32'h1000_1000;
+        AWVALID = 1;
+        
+        uart_AWREADY = 1;
+        
+        wait (AWVALID && AWREADY) begin
+            $display("AWVALID and AWREADY both equal to 1");
+        end
+        
+        @(posedge clk);
+        #1;
+        
+        if (uart_AWVALID == 1 &&
+            uart_AWADDR == 32'h1000_1000 &&
+            memory_AWVALID == 0 &&
+            gpio_AWVALID == 0) begin
+            $display("TEST PASSED: UART address routed correctly");
+        end
+        else begin
+            $display("TEST FAILED: UART address routing");
+        end 
+        
+        AWVALID = 0;
+        uart_AWREADY = 0;      
+        
+        repeat (5) begin
+            @(posedge clk);
+        end  
+        
+        WDATA  = 32'd71;
+        WSTRB = 4'b1111;
+        WVALID = 1;   
+        
+        uart_WREADY = 1;
+        #1;
+        
+        @(posedge clk);
+       
+        if (uart_WVALID == 1 && uart_WDATA == 32'd71 && uart_WSTRB == 4'b1111 && WREADY == 1) begin
+            $display("TEST PASSED: Write data transfer succesful");
+        end     
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        if (memory_AWVALID == 0 && memory_WVALID == 0 &&
+            gpio_AWVALID == 0 && gpio_WVALID == 0) begin
+            $display("TEST PASSED: Memory and GPIO not involved");
+        end
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        #1;
+        
+        WVALID = 0;
+        uart_WREADY = 0;
+        
+        @(posedge clk);
+        #1
+        
+        uart_BRESP = 2'b00;
+        uart_BVALID = 1;
+        BREADY = 1;
+        
+        #1;
+        
+        if (BRESP == 2'b00 && BVALID == 1 && uart_BREADY == 1) begin
+            $display("TEST PASSED: Write transfer succesful");
+        end     
+        else begin
+            $display("TEST FAILED");
+        end
+        
+        wait (BVALID && BREADY);
+        
+        @(posedge clk);
+        #1;
+        
+        uart_BVALID = 0;
         BREADY = 0;               
         
         $finish;
