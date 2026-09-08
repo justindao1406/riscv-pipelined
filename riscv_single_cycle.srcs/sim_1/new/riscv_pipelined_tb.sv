@@ -17,23 +17,16 @@ module riscv_pipelined_tb();
     logic [31:0] predicted_registers [1:21];
     
     riscv_system dut 
-    ( .clk(clk), .reset(reset), 
-    .debug_write_data(debug_write_data) );
+    ( .clk(clk), .reset(reset), .gpio_in(gpio_in), .gpio_out(gpio_out), .uart_rx_pin(uart_rx_pin),
+    .uart_tx_pin(uart_tx_pin), .debug_pc(debug_pc), .debug_write_data(debug_write_data) );
     
     initial begin
         clk = 0;
         reset = 1;
         errors = 0;
         
-        dut.ARREADY = 0;
-        dut.RVALID  = 0;
-        dut.RDATA   = 0;
-        dut.RRESP   = 2'b00;
-        
-        dut.AWREADY = 0;
-        dut.WREADY  = 0;
-        dut.BVALID  = 0;
-        dut.BRESP   = 2'b00;
+        gpio_in = 4'b0000;
+        uart_rx_pin = 1;
         
         predicted_registers[1]  = 32'd5;
         predicted_registers[2]  = 32'd12;
@@ -64,137 +57,7 @@ module riscv_pipelined_tb();
         @(negedge clk);
         reset = 0;
         
-        // --- First load/store pair ---
-        
-        wait (dut.mem_request && dut.mem_read_or_write);
-        
-        wait(dut.AWVALID && dut.WVALID) begin
-            $display("AWVALID = %0d WVALID = %0d", dut.AWVALID, dut.WVALID);
-            dut.AWREADY = 1;
-            dut.WREADY = 1;
-        end
-        
-        @(posedge clk);
-        #1;
-        $display("AWVALID = %0d WVALID = %0d", dut.AWVALID, dut.WVALID);
-        
-        dut.AWREADY = 0;
-        dut.WREADY = 0;
-        
-        dut.BRESP = 2'b00;
-        dut.BVALID = 1;
-        
-        wait(dut.BREADY);
-        #1;
-        
-        if (dut.completed_transaction) begin
-            $display("TEST PASSED: Store has completed transaction");
-        end        
-        
-        @(posedge clk);
-        #1;
-        
-        dut.BVALID = 0;
-        
-        wait (dut.mem_request && !dut.mem_read_or_write);
-        
-        wait(dut.ARVALID) begin
-            $display("ARVALID = %0d", dut.ARVALID);
-            dut.ARREADY = 1;
-        end
-    
-        
-        @(posedge clk);
-        #1;
-        
-        dut.ARREADY = 0;
-        
-        $display("ARVALID = %0d", dut.ARVALID);
-        
-        dut.RDATA = 32'd17;
-        dut.RRESP = 2'b00;
-        dut.RVALID = 1;
-        
-        wait(dut.RREADY);
-        #1;
-        
-        if (dut.completed_transaction) begin
-            $display("TEST PASSED: Load has completed transaction");
-        end        
-        
-        @(posedge clk);
-        #1;
-        
-        dut.RVALID = 0;
-        
-        @(posedge clk);
-        
-        // Second load/store pair 
-        
-        wait (dut.mem_request && dut.mem_read_or_write);
-        
-        wait(dut.AWVALID && dut.WVALID) begin
-            $display("AWVALID = %0d WVALID = %0d", dut.AWVALID, dut.WVALID);
-            dut.AWREADY = 1;
-            dut.WREADY = 1;
-        end
-        
-        @(posedge clk);
-        #1;
-        $display("AWVALID = %0d WVALID = %0d", dut.AWVALID, dut.WVALID);
-        
-        dut.AWREADY = 0;
-        dut.WREADY = 0;
-        
-        dut.BRESP = 2'b00;
-        dut.BVALID = 1;
-        
-        wait(dut.BREADY);
-        #1;
-        
-        if (dut.completed_transaction) begin
-            $display("TEST PASSED: Store has completed transaction");
-        end        
-        
-        @(posedge clk);
-        #1;
-        
-        dut.BVALID = 0;
-        
-        wait (dut.mem_request && !dut.mem_read_or_write);
-        
-        wait(dut.ARVALID) begin
-            $display("ARVALID = %0d", dut.ARVALID);
-            dut.ARREADY = 1;
-        end
-    
-        
-        @(posedge clk);
-        #1;
-        
-        dut.ARREADY = 0;
-        
-        $display("ARVALID = %0d", dut.ARVALID);
-        
-        dut.RDATA = 32'd125;
-        dut.RRESP = 2'b00;
-        dut.RVALID = 1;
-        
-        wait(dut.RREADY);  
-        #1;
-        
-        if (dut.completed_transaction) begin
-            $display("TEST PASSED: Load has completed transaction");
-        end        
-        
-        @(posedge clk);
-        #1;
-        
-        dut.RVALID = 0;
-        
-        #2;
-        
-        repeat(50) begin
+        repeat(150) begin
             @(posedge clk);
         end
         
