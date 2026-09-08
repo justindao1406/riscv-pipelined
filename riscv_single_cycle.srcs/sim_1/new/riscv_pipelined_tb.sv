@@ -7,6 +7,10 @@ module riscv_pipelined_tb();
 
     logic clk;
     logic reset;
+    logic [3:0] gpio_in;
+    logic [3:0] gpio_out;
+    logic uart_rx_pin;
+    logic uart_tx_pin;
     logic [31:0] debug_pc;
     logic [31:0] debug_write_data;
     
