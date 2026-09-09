@@ -11,8 +11,8 @@ set_property -dict {PACKAGE_PIN P14 IOSTANDARD LVCMOS33} [get_ports {led[1]}]
 set_property -dict {PACKAGE_PIN N16 IOSTANDARD LVCMOS33} [get_ports {led[2]}]
 set_property -dict {PACKAGE_PIN M14 IOSTANDARD LVCMOS33} [get_ports {led[3]}]
 
-## setting input delay (reset) to not sync -> manually pressed async
+## reset button is asynchronous
 set_false_path -from [get_ports reset_button]
 
-## setting output delay (led) to not sync 
+## LEDs are asynchronous outputs
 set_false_path -to [get_ports {led[*]}]

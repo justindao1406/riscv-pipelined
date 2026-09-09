@@ -10,13 +10,24 @@ module riscv_fpga_top(
     logic clock_locked; // clocking wizard stabilizes to 100 MHz
     logic cpu_reset;
     
+    logic [3:0] gpio_in;
+    logic [3:0] gpio_out;
+    
+    logic uart_rx_pin;
+    logic uart_tx_pin;
+    
+    assign gpio_in = 4'b0000;
+    assign uart_rx_pin = 1'b1;
+    
     logic [31:0] debug_pc;
     logic [31:0] debug_write_data;
     
     cpu_clock_gen cpu_clk_inst ( .clk_out1(cpu_clk), .reset(reset_button), .locked(clock_locked), .clk_in1(sysclk) ); 
     assign cpu_reset = reset_button || !clock_locked;
     
-    riscv_pipelined riscv_pip_inst ( .clk(cpu_clk), .reset(cpu_reset), .debug_pc(debug_pc), .debug_write_data(debug_write_data) );
+    riscv_system riscv_sys_inst ( .clk(cpu_clk), .reset(cpu_reset),
+    .gpio_in(gpio_in), .gpio_out(gpio_out), .uart_rx_pin(uart_rx_pin),
+    .uart_tx_pin(uart_tx_pin), .debug_pc(debug_pc), .debug_write_data(debug_write_data) );
     
     // sticky pass
     
