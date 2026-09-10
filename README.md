@@ -1,6 +1,6 @@
-﻿# Five-Stage Pipelined RISC-V processor
+﻿# Five-Stage RISC-V FPGA SoC
 
-A 5-stage pipelined RV32I-based processor implemented using SystemVerilog. The design handles data forwarding, load-use stalls and control-hazard flushing. Verified in Vivado with self-checking testbenches.
+A custom RV32I FPGA System-on-Chip implemented in SystemVerilog, featuring a five-stage pipelined processor, AXI4-Lite master and interconnect, 64 KiB of BRAM data memory, GPIO, UART and timer peripherals. The design was verified using self-checking SystemVerilog testbenches and deployed on a PYNQ-Z2 FPGA at 100 MHz.
 
 ## Key Results
 
@@ -8,10 +8,13 @@ A 5-stage pipelined RV32I-based processor implemented using SystemVerilog. The d
 - Supports arithmetic, logical and immediate instructions, LUI/AUIPC, word loads and stores, six branch conditions, JAL and JALR.
 - Handles data hazards using Memory and Write Back forwarding alongside single-cycle load-use stalls.
 - Handles control hazards by flushing wrong-path instructions after taken branches and jumps.
-- Passed self-checking module tests and an integrated processor test with all 21 expected register values matching.
+- Uses an AXI4-Lite master and an interconnect for addressable communication between the CPU and the SoC peripherals.
+- Includes 64 KiB of BRAM data memory, GPIO, UART and timer peripherals.
+- Passed self-checking module tests and an integrated processor test with all 21 expected register values matching through the AXI and BRAM memory path.
+- Verified communication between CPU and peripherals on the PYNQ-Z2 by writing 0b1010 through the AXI GPIO peripheral and observing the corresponding LED pattern.
 - Deployed and verified on a PYNQ-Z2 FPGA using a 100 MHz processor clock.
-- Passed timing with +0.358 ns setup slack, +0.034 ns hold slack and zero failing endpoints.
-- Uses 770 LUTs, 536 flip-flops, half of one block RAM tile and one MMCM.
+- Passed timing with +0.409 ns setup slack, +0.122 ns hold slack and zero failing endpoints.
+- Uses 1115 LUTs, 767 flip-flops, 16 Block RAM tiles and one MMCM.
 
 <p align="center">
   <img src="docs/images/fpga_result.png" alt="PYNQ-Z2 showcasing locked processor clock and successful test" width="700"><br>
@@ -20,7 +23,9 @@ A 5-stage pipelined RV32I-based processor implemented using SystemVerilog. The d
 
 ## Overview
 
-This project describes a pipelined RISC-V ISA based processor implemented in SystemVerilog. The CPU has an RV32I instruction set architecture, having both the instructions and registers being 32 bits in size. The microarchitecture supports arithmetic calculations, memory access, branching and jumping. The design is ran in Vivado where it is synthesized and implemented. Then for testing, an FPGA is used with the generated bitstream.
+This project describes a custom RISC-V FPGA SoC written in SystemVerilog. The CPU has an RV32I instruction set architecture, arithmetic calculations, memory access, branching and jumping. As well, the microprocessor uses forwarding, load-use stalls, memory-access stalls and flushing to maintain correct execution when multiple instructions are overlapping in the pipeline.
+
+The SoC includes 64 KiB of BRAM data memory together with GPIO, UART and timer peripherals. The design is synthesized and implemented in Vivado, then deployed on a PYNQ-Z2 FPGA running at 100 MHz using the generated bitstream.
 
 Each instruction execution is divided into five pipeline stages:
 
@@ -60,8 +65,9 @@ The processor divides instruction execution between five stages. Each stage perf
 
 #### Memory Access (MEM)
 
-- If needed, load and store instructions by accessing the data memory using the address calculated by the ALU.
-- Other instructions pass their ALU result through this stage without accessing memory.
+- Load/store instructions create memory requests using the address (calculated by the ALU).
+- These requests are sent to the AXI4-Lite master, which communicates with either BRAM or one of the peripherals.
+- If the AXI transaction has not yet completed, the pipeline remains stalled until the response is received.
 
 #### Write Back (WB)
 
@@ -134,19 +140,76 @@ The control signals are stored in the ID/EX pipeline register and move through t
 - If a branch or a jump occurs, program counter will be redirected to the calculated target address.
 - Instructions in the Fetch and Decode stages belong to the incorrect execution path and are flushed before they can change the processor state.
 
+#### Memory-Access Stall
+
+- When a load or store reaches the Memory stage, the processor sends a request to the AXI4-Lite master.
+- An AXI transaction can require multiple clock cycles.
+- The pipeline prevents the memory instruction from leaving the Memory stage.
+- Earlier pipeline stages are held to prevent new instructions from advancing.
+- Once the AXI master receives the required read data or write response, normal pipeline execution continues.
+
+#### AXI4-Lite Master
+
+- The processor communicates with BRAM and address-based peripherals through a custom AXI4-Lite master.
+- Load/store requests from the processor are converted into AXI transactions using VALID/READY handshakes.
+- For reads, the master sends the requested address and waits for the returned data.
+- For writes, the master sends the address and write data. Waits for the write response.
+- Once the transaction is complete, the master can signal the processor to continue execution.
+
+#### AXI4-Lite Interconnect
+
+- The AXI4-Lite interconnect connects the AXI master to the SoC memory and peripherals.
+- It checks the requested address and routes the transaction to the correct slave.
+  - 0x0000_0000 to 0x0000_FFFF → BRAM
+  - 0x1000_0000 to 0x1000_0FFF → GPIO
+  - 0x1000_1000 to 0x1000_1FFF → UART
+  - 0x1000_2000 to 0x1000_2FFF → Timer
+- The interconnect also routes the selected slave's response back to the AXI master.
+
+#### GPIO
+
+- The GPIO peripheral uses:
+  - 4 input bits
+  - 4 output bits
+- Address 0x1000_0000 updates the GPIO outputs.
+- Address 0x1000_0004 accesses the GPIO inputs.
+- The GPIO output path was also verified on hardware by writing 0b1010 and observing the same pattern on the FPGA LEDs.
+
+#### UART
+
+- The UART peripheral provides serial transmit and receive functionality.
+- The processor can write data to the UART transmitter
+- The processor can read received data and check transmitter/receiver status through addressable registers.
+- This allows UART communication using normal RISC-V load and store instructions.
+
+#### Timer
+
+- The timer contains a 32-bit counter, control register, compare register and status register.
+- The processor can enable/clear the counter, set a compare value and check when the compare value has been reached.
+
 ### <u> FPGA Top-Level System </u>
 
 The FPGA top-level system connects the board clock and reset inputs to the pipelined processor core. The instruction and data memories are included within the processor system, allowing a test program and its required data values to be initialized before synthesis.
 
-Once reset is released, the program counter begins at its reset address and the processor starts executing the stored instructions through the five pipeline stages. Selected processor outputs can then be observed to confirm that the program produces the predicted results.
+Once reset is released, the program counter begins at its reset address and the processor starts executing the stored instructions through the five pipeline stages. Predicted results can then be used to confirm observed outputs from the processor.
+
+`riscv_fpga_top` contains the RISC-V CPU, AXI4-Lite master and its interconnect, BRAM, GPIO, UART and timer.
+
+`instruction.mem` is initialized in instruction memory and load/store instructions access BRAM and the peripherals.
 
 Vivado synthesizes and implements the complete system for the PYNQ-Z2. The generated bitstream is programmed onto the FPGA and used to test the processor in hardware.
 
 ## Verification and Results
 
-The individual processor modules were verified using self-checking SystemVerilog testbenches. These tests covered the program counter, instruction memory, data memory, register file, immediate generator, main decoder, ALU decoder and ALU operations. Each testbench compared its produced values against manually calculated predicted results.
+The processor and SoC components were verified using self-checking SystemVerilog testbenches.
 
-The complete processor was then verified using `riscv_pipelined_tb`. A test program was loaded from `instructions.mem` and executed through the five pipeline stages. The program validated the system's dependent arithmetic instructions, memory operations, branching, jumping, forwarding, stalls and flushing. After execution, the testbench compared registers `x1` to `x21` against their predicted values. All 21 registers matched.
+The original processor tests covered the register file, instruction memory, decoder, ALU, forwarding, load-use stalls and control-hazard flushing.
+
+In addition, the same testing method verified the AXI4-Lite master, AXI interconnect, BRAM, GPIO, UART and timer peripherals.
+
+The complete system was then tested using `riscv_pipelined_tb`. The test program was loaded from `instructions.mem` and executed through the full processor, AXI master, interconnect and BRAM path.
+
+After execution, registers `x1` through `x21` were compared against their expected values. All 21 registers matched.
 
 ### Data Forwarding Test
 
@@ -172,13 +235,33 @@ The instructions currently in the IF and ID stages belong to the wrong execution
 
 ![Taken branch redirecting the program counter and flushing wrong-path instructions](docs/images/branch_flush_waveform.png)
 
+### AXI Write Transaction Test
+
+From `instruction.mem`, the store instruction `sw x19, 4(x0)` writes `125` to address `0x00000004`
+
+The waveform shows the CPU request being converted into an AXI write transaction, followed by the address, data and response handshakes.
+
+![Waveform portraying the AXI write transaction](docs/images/axi_write_transaction.png)
+
+### GPIO Hardware Test
+
+The processor writes a 4-bit value `1010` to the GPIO output using AXI.
+
+The PYNQ-Z2 LEDs illuminate with the same `1010` pattern, confirming the complete CPU -> AXI master -> interconnect -> GPIO -> FPGA LED path.
+
+![GPIO LEDs FPGA test](docs/images/gpio_1010_hardware.png)
+
 ## Synthesis and FPGA Deployment
 
-The RV32I based processor was synthesized and implemented in Vivado for the PYNQ-Z2's XC7Z020 FPGA. Since an FPGA does not have a universal clock, Clocking Wizard has to convert the board's 125 MHz input clock into a 100 MHz processor clock. The processor will stay in reset mode until the generated clock is able to stabilize for which the Clocking Wizard asserts `clock_locked`.
+The RV32I based processor was synthesized and implemented in Vivado for the PYNQ-Z2's XC7Z020 FPGA. Since an FPGA does not have a universal clock, Clocking Wizard has to convert the board's 125 MHz input clock into a 100 MHz processor clock. The SoC will stay in reset mode until the generated clock is able to stabilize for which the Clocking Wizard asserts `clock_locked`.
 
-After implementation, the design met all timing constraints with zero failing endpoints. The worst setup slack was +0.358 ns and the worst hold slack was +0.034 ns.
+After implementation, the design met all timing constraints with zero failing endpoints. The results:
 
-![Post implement timing summary with zero fails](docs/images/timing_pass.png)
+- Worst setup slack: +0.409 ns
+- Worst hold slack: +0.122 ns
+- Worst pulse-width slack: +2.000 ns
+
+![Post implement timing summary with zero fails](docs/images/timing_summary.png)
 
 The generated bitstream was programmed onto the PYNQ-Z2. The FPGA top-level module executes the test program stored in instruction memory and monitors the processor's Write Back stage through `debug_pc` and `debug_write_data`.
 
@@ -195,13 +278,13 @@ Pressing BTN0 resets the Clocking Wizard and processor while clearing `test_pass
 
 ## Resource Utilization
 
-The implemented system uses 770 LUTs, 536 flip-flops and half of one block RAM tile. The single MMCM is used by the Clocking Wizard to generate the 100 MHz processor clock. The six I/O ports correspond to the board clock, reset button and four LED outputs.
+The implemented system uses 1115 LUTs (2.10%), 767 flip-flops (0.72%), 16 Block RAM tiles (11.43%) and 6 I/O ports (4.80%). The single MMCM is used by the Clocking Wizard to generate the 100 MHz processor clock. The six I/O ports correspond to the board clock, reset button and four LED outputs.
 
 ![Post-implementation FPGA resource utilization](docs/images/report_utilization.png)
 
 ## How to Run
 
-### Integrated Processor Simulation
+### Integrated SoC Simulation
 
 1. Open `riscv_single_cycle.xpr` in Vivado.
 2. Under Simulation Sources, set `riscv_pipelined_tb` as the simulation top.
@@ -213,7 +296,7 @@ ALL PIPELINE TESTS PASSED
 21/21 REGISTERS MATCHED
 ```
 
-The testbench loads the program from `instructions.mem`, executes it for 30 clock cycles and automatically compares registers `x1` through `x21` against their predicted values.
+The testbench loads the program from `instructions.mem`, executes it for 150 clock cycles and automatically compares registers `x1` through `x21` against their predicted values.
 
 To inspect the processor cycle by cycle, set `riscv_pipelined_tb_display` as the simulation top instead. This testbench displays the pipeline stages, forwarding values, stall signal and flush signal during execution.
 
@@ -228,3 +311,12 @@ Individual module testbenches can also be selected as the simulation top to veri
 5. Connect and power on the PYNQ-Z2.
 6. Open Hardware Manager and select Open Target → Auto Connect.
 7. Select the XC7Z020 device, click Program Device and use the generated bitstream.
+
+For the hardware test:
+
+- `led[0]` : indicates that the processor reached the expected result.
+- `led[1]` : indicates that the 100 MHz processor clock is locked.
+- `led[2]` : indicates reset.
+- `led[3]` : is unused.
+
+For the GPIO hardware test, a temporary program can write `4'b1010` to the GPIO output register, illuminating the same 1010 pattern on the four onboard LEDs.
