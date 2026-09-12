@@ -136,6 +136,27 @@ module riscv_system(
     logic timer_BVALID;
     logic timer_BREADY;
     
+    // FIR AXI signals
+    
+    logic [31:0] fir_ARADDR;
+    logic fir_ARVALID;
+    logic fir_ARREADY;
+    logic [31:0] fir_RDATA;
+    logic [1:0] fir_RRESP;
+    logic fir_RVALID;
+    logic fir_RREADY;
+    
+    logic [31:0] fir_AWADDR;
+    logic fir_AWVALID;
+    logic fir_AWREADY;
+    logic [31:0] fir_WDATA;
+    logic [3:0] fir_WSTRB;
+    logic fir_WVALID;
+    logic fir_WREADY;
+    logic [1:0] fir_BRESP;
+    logic fir_BVALID;
+    logic fir_BREADY;
+    
     // AXI INTERCONNECT
     
     axi_interconnect axi_ic_inst
@@ -152,21 +173,27 @@ module riscv_system(
     .uart_BRESP(uart_BRESP), .uart_BVALID(uart_BVALID), .timer_ARREADY(timer_ARREADY),
     .timer_AWREADY(timer_AWREADY), .timer_RDATA(timer_RDATA), .timer_RVALID(timer_RVALID),
     .timer_RRESP(timer_RRESP), .timer_WREADY(timer_WREADY), .timer_BRESP(timer_BRESP),
-    .timer_BVALID(timer_BVALID), .ARREADY(ARREADY), .RDATA(RDATA),
-    .RRESP(RRESP), .RVALID(RVALID), .AWREADY(AWREADY),
-    .WREADY(WREADY), .BRESP(BRESP), .BVALID(BVALID),
+    .timer_BVALID(timer_BVALID), .fir_ARREADY(fir_ARREADY), .fir_AWREADY(fir_AWREADY),
+    .fir_RDATA(fir_RDATA), .fir_RVALID(fir_RVALID), .fir_RRESP(fir_RRESP),
+    .fir_WREADY(fir_WREADY), .fir_BRESP(fir_BRESP), .fir_BVALID(fir_BVALID),
+    .ARREADY(ARREADY), .RDATA(RDATA), .RRESP(RRESP), .RVALID(RVALID),
+    .AWREADY(AWREADY), .WREADY(WREADY), .BRESP(BRESP), .BVALID(BVALID),
     .memory_ARADDR(memory_ARADDR), .memory_AWADDR(memory_AWADDR), .gpio_ARADDR(gpio_ARADDR),
     .gpio_AWADDR(gpio_AWADDR), .uart_ARADDR(uart_ARADDR), .uart_AWADDR(uart_AWADDR),
-    .timer_ARADDR(timer_ARADDR), .timer_AWADDR(timer_AWADDR), .memory_ARVALID(memory_ARVALID),
+    .timer_ARADDR(timer_ARADDR), .timer_AWADDR(timer_AWADDR), .fir_ARADDR(fir_ARADDR),
+    .fir_AWADDR(fir_AWADDR), .memory_ARVALID(memory_ARVALID),
     .memory_AWVALID(memory_AWVALID), .memory_RREADY(memory_RREADY), .gpio_ARVALID(gpio_ARVALID),
     .gpio_AWVALID(gpio_AWVALID), .gpio_RREADY(gpio_RREADY), .uart_ARVALID(uart_ARVALID),
     .uart_AWVALID(uart_AWVALID), .uart_RREADY(uart_RREADY), .timer_ARVALID(timer_ARVALID),
-    .timer_AWVALID(timer_AWVALID), .timer_RREADY(timer_RREADY), .memory_WDATA(memory_WDATA),
+    .timer_AWVALID(timer_AWVALID), .timer_RREADY(timer_RREADY), .fir_ARVALID(fir_ARVALID),
+    .fir_AWVALID(fir_AWVALID), .fir_RREADY(fir_RREADY), .memory_WDATA(memory_WDATA),
     .memory_WSTRB(memory_WSTRB), .memory_WVALID(memory_WVALID), .memory_BREADY(memory_BREADY),
     .gpio_WDATA(gpio_WDATA), .gpio_WSTRB(gpio_WSTRB), .gpio_WVALID(gpio_WVALID),
     .gpio_BREADY(gpio_BREADY), .uart_WDATA(uart_WDATA), .uart_WSTRB(uart_WSTRB),
     .uart_WVALID(uart_WVALID), .uart_BREADY(uart_BREADY), .timer_WDATA(timer_WDATA),
-    .timer_WSTRB(timer_WSTRB), .timer_WVALID(timer_WVALID), .timer_BREADY(timer_BREADY) );
+    .timer_WSTRB(timer_WSTRB), .timer_WVALID(timer_WVALID), .timer_BREADY(timer_BREADY),
+    .fir_WDATA(fir_WDATA), .fir_WSTRB(fir_WSTRB), .fir_WVALID(fir_WVALID),
+    .fir_BREADY(fir_BREADY) );
     
     // AXI BRAM
     
@@ -209,5 +236,15 @@ module riscv_system(
     .BREADY(timer_BREADY), .ARREADY(timer_ARREADY), .RDATA(timer_RDATA),
     .RRESP(timer_RRESP), .RVALID(timer_RVALID), .AWREADY(timer_AWREADY),
     .WREADY(timer_WREADY), .BVALID(timer_BVALID), .BRESP(timer_BRESP) );
+    
+    // AXI FIR
+    
+    axi_fir axi_fir_inst
+    ( .clk(clk), .reset(reset), .ARADDR(fir_ARADDR), .ARVALID(fir_ARVALID),
+    .RREADY(fir_RREADY), .AWADDR(fir_AWADDR), .AWVALID(fir_AWVALID),
+    .WDATA(fir_WDATA), .WSTRB(fir_WSTRB), .WVALID(fir_WVALID),
+    .BREADY(fir_BREADY), .ARREADY(fir_ARREADY), .RDATA(fir_RDATA),
+    .RRESP(fir_RRESP), .RVALID(fir_RVALID), .AWREADY(fir_AWREADY),
+    .WREADY(fir_WREADY), .BVALID(fir_BVALID), .BRESP(fir_BRESP) );
     
 endmodule
