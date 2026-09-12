@@ -85,15 +85,15 @@ module fir_filter_q15_wave_tb();
         @(negedge clk) begin    
             sample_valid = 0;
         end
-        repeat(2) // lets delayed_valid calculate the final output + lets output_valid = 0
-            @(posedge clk); 
-            @(negedge clk);
+        wait (output_position == 480);
+        @(negedge clk);
             
         if (error_count == 0 && output_position == 480) begin
             $display("TEST PASSED: All 480 sample outputs match the predicted outputs");
         end
         else begin
-            $display("TEST FAILED: error count is %0d", error_count);
+            $display("TEST FAILED: error count is %0d, output position is %0d",
+                     error_count, output_position);
         end
         $finish;
     end
