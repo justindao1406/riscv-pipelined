@@ -50,6 +50,14 @@ module axi_interconnect(
     input logic timer_WREADY,
     input logic [1:0] timer_BRESP,
     input logic timer_BVALID,
+    input logic fir_ARREADY,
+    input logic fir_AWREADY,
+    input logic [31:0] fir_RDATA,
+    input logic fir_RVALID,
+    input logic [1:0] fir_RRESP,
+    input logic fir_WREADY,
+    input logic [1:0] fir_BRESP,
+    input logic fir_BVALID,
     
     // output: slave (interconnect) -> master (AXI master)
     output logic ARREADY,
@@ -71,6 +79,8 @@ module axi_interconnect(
     output logic [31:0] uart_AWADDR,
     output logic [31:0] timer_ARADDR,
     output logic [31:0] timer_AWADDR,    
+    output logic [31:0] fir_ARADDR,
+    output logic [31:0] fir_AWADDR,      
     output logic memory_ARVALID,
     output logic memory_AWVALID,
     output logic memory_RREADY,
@@ -83,6 +93,9 @@ module axi_interconnect(
     output logic timer_ARVALID,
     output logic timer_AWVALID,
     output logic timer_RREADY,    
+    output logic fir_ARVALID,
+    output logic fir_AWVALID,
+    output logic fir_RREADY,      
     output logic [31:0] memory_WDATA,
     output logic [3:0] memory_WSTRB,
     output logic memory_WVALID,
@@ -98,7 +111,11 @@ module axi_interconnect(
     output logic [31:0] timer_WDATA,
     output logic [3:0] timer_WSTRB,
     output logic timer_WVALID,
-    output logic timer_BREADY    
+    output logic timer_BREADY,    
+    output logic [31:0] fir_WDATA,
+    output logic [3:0] fir_WSTRB,
+    output logic fir_WVALID,
+    output logic fir_BREADY       
     );
     
     // select flags
@@ -107,11 +124,13 @@ module axi_interconnect(
     logic gpio_read_select;
     logic uart_read_select;
     logic timer_read_select;
+    logic fir_read_select;
     
     logic memory_write_select;
     logic gpio_write_select;
     logic uart_write_select;
     logic timer_write_select;
+    logic fir_write_select;
     
     // read transaction tracker
     
@@ -120,7 +139,8 @@ module axi_interconnect(
         READ_MEMORY,
         READ_GPIO,
         READ_UART,
-        READ_TIMER
+        READ_TIMER,
+        READ_FIR
     } read_owner_t;
     
     read_owner_t read_owner;
@@ -132,7 +152,8 @@ module axi_interconnect(
         WRITE_MEMORY,
         WRITE_GPIO,
         WRITE_UART,
-        WRITE_TIMER
+        WRITE_TIMER,
+        WRITE_FIR
     } write_owner_t;
     
     write_owner_t write_owner;
@@ -144,18 +165,22 @@ module axi_interconnect(
         gpio_read_select = 0;
         uart_read_select = 0;
         timer_read_select = 0;
+        fir_read_select = 0;
         memory_write_select = 0;
         gpio_write_select = 0;
         uart_write_select = 0;
         timer_write_select = 0;
+        fir_write_select = 0;
         memory_ARVALID = 0;
         gpio_ARVALID = 0;
         uart_ARVALID = 0;
         timer_ARVALID = 0;
+        fir_ARVALID = 0;
         memory_AWVALID = 0;
         gpio_AWVALID = 0;    
         uart_AWVALID = 0;
         timer_AWVALID = 0;
+        fir_AWVALID = 0;
         memory_ARADDR = 32'd0;
         memory_AWADDR = 32'd0;
         gpio_ARADDR = 32'd0;
@@ -163,7 +188,9 @@ module axi_interconnect(
         uart_ARADDR = 32'd0;
         uart_AWADDR = 32'd0;     
         timer_ARADDR = 32'd0;
-        timer_AWADDR = 32'd0;                 
+        timer_AWADDR = 32'd0;
+        fir_ARADDR = 32'd0;
+        fir_AWADDR = 32'd0;                             
     
         if (ARADDR[31:16] == 16'h0000) begin
             memory_read_select = 1;
@@ -211,6 +238,18 @@ module axi_interconnect(
             timer_AWADDR   = AWADDR;
             timer_AWVALID = AWVALID;
         end        
+        
+        if (ARADDR[31:12] == 20'h10003) begin
+            fir_read_select = 1;
+            fir_ARADDR   = ARADDR;
+            fir_ARVALID = ARVALID;
+        end   
+        
+        if (AWADDR[31:12] == 20'h10003) begin
+            fir_write_select = 1;
+            fir_AWADDR   = AWADDR;
+            fir_AWVALID = AWVALID;
+        end            
     end
     
     always_comb begin
@@ -223,6 +262,7 @@ module axi_interconnect(
         gpio_RREADY = 0;
         uart_RREADY = 0;
         timer_RREADY = 0;
+        fir_RREADY = 0;
         memory_WDATA = 0;
         memory_WSTRB = 0;
         memory_WVALID = 0;
@@ -235,6 +275,9 @@ module axi_interconnect(
         timer_WDATA = 0;
         timer_WSTRB = 0;
         timer_WVALID = 0;        
+        fir_WDATA = 0;
+        fir_WSTRB = 0;
+        fir_WVALID = 0;          
         WREADY = 0;
         BRESP = 0;
         BVALID = 0;
@@ -242,6 +285,7 @@ module axi_interconnect(
         gpio_BREADY = 0;
         uart_BREADY = 0;
         timer_BREADY = 0;
+        fir_BREADY = 0;        
     
         // sends READY address back to master
     
@@ -268,7 +312,13 @@ module axi_interconnect(
         end
         if (timer_write_select) begin
             AWREADY = timer_AWREADY;
-        end        
+        end  
+        if (fir_read_select) begin
+            ARREADY = fir_ARREADY;     
+        end
+        if (fir_write_select) begin
+            AWREADY = fir_AWREADY;
+        end                  
         
         // read data
         
@@ -300,7 +350,14 @@ module axi_interconnect(
             RVALID = timer_RVALID;
             RRESP = timer_RRESP;
             timer_RREADY = RREADY;
-        end              
+        end      
+        
+        if (read_owner == READ_FIR) begin
+            RDATA = fir_RDATA;
+            RVALID = fir_RVALID;
+            RRESP = fir_RRESP;
+            fir_RREADY = RREADY;
+        end                     
         
         // write data + validation 
         
@@ -342,7 +399,17 @@ module axi_interconnect(
             BRESP = timer_BRESP;
             BVALID = timer_BVALID;
             timer_BREADY = BREADY;               
-        end        
+        end    
+        
+        if (write_owner == WRITE_FIR) begin
+            fir_WDATA = WDATA;
+            fir_WSTRB = WSTRB;
+            fir_WVALID = WVALID;
+            WREADY = fir_WREADY;         
+            BRESP = fir_BRESP;
+            BVALID = fir_BVALID;
+            fir_BREADY = BREADY;               
+        end               
     end
     
     // Keeps track of owner (owner = peripheral responsible for sending data to master)
@@ -370,7 +437,11 @@ module axi_interconnect(
         
         else if (timer_read_select && ARVALID && ARREADY) begin
             read_owner <= READ_TIMER;
-        end        
+        end 
+        
+        else if (fir_read_select && ARVALID && ARREADY) begin
+            read_owner <= READ_FIR;
+        end                
     end
     
         always_ff @(posedge clk) begin
@@ -397,6 +468,10 @@ module axi_interconnect(
         else if (timer_write_select && AWVALID && AWREADY) begin
             write_owner <= WRITE_TIMER;
         end
+        
+        else if (fir_write_select && AWVALID && AWREADY) begin
+            write_owner <= WRITE_FIR;
+        end        
     end
     
 endmodule
