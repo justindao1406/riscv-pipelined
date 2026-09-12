@@ -122,6 +122,9 @@ module riscv_pipelined(
      logic [4:0] rd_addrW; // Came from write back
      logic reg_writeW; // Came from write back
      
+    logic [31:0] forwarded_rs1D;
+    logic [31:0] forwarded_rs2D;
+     
      register_file rf_inst
      ( .clk(clk), .write_enable(reg_writeW && !reset && !is_memory_stall), .write_addr(rd_addrW), .write_data(write_dataW), 
      .rs1_addr(rs1_addrD), .rs2_addr(rs2_addrD), .rs1_data(rs1_dataD), .rs2_data(rs2_dataD) );
@@ -257,8 +260,8 @@ module riscv_pipelined(
         else begin
             pcE <= pcD;
             pc_plus_4E <= pc_plus_4D;
-            rs1_dataE <= rs1_dataD;          
-            rs2_dataE <= rs2_dataD;   
+            rs1_dataE <= forwarded_rs1D;          
+            rs2_dataE <= forwarded_rs2D;   
             immediateE <= immediateD;
             alu_ctrlE <= alu_ctrlD;
             alu_src_aE <= alu_src_aD;
@@ -572,23 +575,42 @@ module riscv_pipelined(
         
         // rs1
      
-        if (rs1_addrE == rd_addrM && reg_writeM == 1 && rd_addrM != 5'd0) begin
+        if (rs1_addrE == rd_addrM && reg_writeM == 1 && rd_addrM != 5'd0) begin // M -> E (rs1)
             forwarded_rs1E = alu_resM;
         end
         
-        else if (rs1_addrE == rd_addrW && reg_writeW == 1 && rd_addrW != 5'd0) begin
+        else if (rs1_addrE == rd_addrW && reg_writeW == 1 && rd_addrW != 5'd0) begin // W -> E (rs2)
             forwarded_rs1E = write_dataW;
         end
         
         // rs2
         
-        if (rs2_addrE == rd_addrM && reg_writeM == 1 && rd_addrM != 5'd0) begin
+        if (rs2_addrE == rd_addrM && reg_writeM == 1 && rd_addrM != 5'd0) begin // M -> E (rs1)
             forwarded_rs2E = alu_resM;
         end
         
-        else if (rs2_addrE == rd_addrW && reg_writeW == 1 && rd_addrW != 5'd0) begin
+        else if (rs2_addrE == rd_addrW && reg_writeW == 1 && rd_addrW != 5'd0) begin // W -> E (rs2)
             forwarded_rs2E = write_dataW;
         end
+    end
+    
+    // FORWARDING LOGIC (WRITE BACK -> DECODE) 
+    
+    always_comb begin
+        forwarded_rs1D = rs1_dataD;
+        forwarded_rs2D = rs2_dataD;
+        
+        // rs1
+     
+        if (rs1_addrD == rd_addrW && reg_writeW == 1 && rd_addrW != 5'd0) begin 
+            forwarded_rs1D = write_dataW;
+        end
+        
+        // rs2
+        
+        if (rs2_addrD == rd_addrW && reg_writeW == 1 && rd_addrW != 5'd0) begin
+            forwarded_rs2D = write_dataW;
+        end            
     end
     
     assign debug_pc = pcW;
