@@ -1,7 +1,7 @@
 100030B7  // lui  x1, 0x10003   -> Set FIR address
 3E800113  // addi x2, x0, 1000  -> Set input to 1000
 0020A023  // sw   x2, 0(x1)     -> Send input to FIR
-0080A183  // lw   x3, 8(x1)     -> Read FIR status
+0080A183  // lw   x3, 8(x1)     -> Read FIR status (NEED FORWARDING HERE)
 FE018EE3  // beq  x3, x0, -4    -> Repeat status read if not ready
 0040A203  // lw   x4, 4(x1)     -> Read FIR output
 0000006F  // jal  x0, 0         -> Stay here

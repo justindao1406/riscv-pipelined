@@ -6,6 +6,9 @@ module fir_filter_q15_top(
 
     logic signed [15:0] coefficients [0:14];
     
+    // Symmetric coefficients : linear-phase FIR filters where every freq. component is delayed equally
+    // Common for low-pass, high-pass, band-pass filters
+    
     assign coefficients[0] = -122;
     assign coefficients[1] = -159;
     assign coefficients[2] = -71;

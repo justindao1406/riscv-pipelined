@@ -90,7 +90,7 @@ module fir_filter_q15_wave_tb();
             @(negedge clk);
             
         if (error_count == 0 && output_position == 480) begin
-            $display("TEST PASSED: All sample outputs match the predicted outputs");
+            $display("TEST PASSED: All 480 sample outputs match the predicted outputs");
         end
         else begin
             $display("TEST FAILED: error count is %0d", error_count);
