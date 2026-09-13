@@ -1,26 +1,29 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 09/13/2026 02:33:36 PM
-// Design Name: 
-// Module Name: axi_fir_sequence
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
 
-module axi_fir_sequence(
+class axi_fir_sequence extends uvm_sequence #(axi_fir_item);
+    
+    `uvm_object_utils(axi_fir_sequence)
+    
+    function new(input string name = "axi_fir_sequence");
+        super.new(name);
+    endfunction
+    
+    virtual task body();
+    
+        axi_fir_item request;
+        request = axi_fir_item::type_id::create("request");
+        
+        start_item(request); // waits for sequencer permission to send item
+        
+        if (!request.randomize()) begin
+            `uvm_fatal("RANDOMIZE_FAILED", "axi_fir_item randomization failed")
+        end
+        
+        finish_item(request); // sends item to driver and waits for completion
+            
+    endtask
 
-    );
-endmodule
+endclass
